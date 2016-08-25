@@ -1,7 +1,7 @@
 /*******************************************************************************
 
-    uBlock - a browser extension to block requests.
-    Copyright (C) 2014-2015 Raymond Hill
+    uBlock Origin - a browser extension to block requests.
+    Copyright (C) 2014-2016 Raymond Hill
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
     Home: https://github.com/gorhill/uBlock
 */
 
-/* global µBlock */
+'use strict';
 
 /*******************************************************************************
 
@@ -34,8 +34,6 @@ To create a log of net requests
 /******************************************************************************/
 
 µBlock.PageStore = (function() {
-
-'use strict';
 
 /******************************************************************************/
 
@@ -60,13 +58,13 @@ NetFilteringResultCacheEntry.prototype.init = function(result, type) {
     this.result = result;
     this.type = type;
     this.time = Date.now();
+    return this;
 };
 
 /******************************************************************************/
 
 NetFilteringResultCacheEntry.prototype.dispose = function() {
-    this.result = '';
-    this.type = '';
+    this.result = this.type = '';
     if ( netFilteringResultCacheEntryJunkyard.length < netFilteringResultCacheEntryJunkyardMax ) {
         netFilteringResultCacheEntryJunkyard.push(this);
     }
@@ -75,13 +73,10 @@ NetFilteringResultCacheEntry.prototype.dispose = function() {
 /******************************************************************************/
 
 NetFilteringResultCacheEntry.factory = function(result, type) {
-    var entry = netFilteringResultCacheEntryJunkyard.pop();
-    if ( entry === undefined ) {
-        entry = new NetFilteringResultCacheEntry(result, type);
-    } else {
-        entry.init(result, type);
+    if ( netFilteringResultCacheEntryJunkyard.length ) {
+        return netFilteringResultCacheEntryJunkyard.pop().init(result, type);
     }
-    return entry;
+    return new NetFilteringResultCacheEntry(result, type);
 };
 
 /******************************************************************************/
@@ -112,7 +107,7 @@ NetFilteringResultCache.factory = function() {
 /******************************************************************************/
 
 NetFilteringResultCache.prototype.init = function() {
-    this.urls = {};
+    this.urls = Object.create(null);
     this.count = 0;
     this.shelfLife = 15 * 1000;
     this.timer = null;
@@ -133,16 +128,17 @@ NetFilteringResultCache.prototype.dispose = function() {
 /******************************************************************************/
 
 NetFilteringResultCache.prototype.add = function(context, result) {
-    var url = context.requestURL;
-    var type = context.requestType;
-    var entry = this.urls[url];
+    var url = context.requestURL,
+        type = context.requestType,
+        key = type + ' ' + url,
+        entry = this.urls[key];
     if ( entry !== undefined ) {
         entry.result = result;
         entry.type = type;
         entry.time = Date.now();
         return;
     }
-    this.urls[url] = NetFilteringResultCacheEntry.factory(result, type);
+    this.urls[key] = NetFilteringResultCacheEntry.factory(result, type);
     if ( this.count === 0 ) {
         this.pruneAsync();
     }
@@ -153,12 +149,9 @@ NetFilteringResultCache.prototype.add = function(context, result) {
 
 NetFilteringResultCache.prototype.empty = function() {
     for ( var key in this.urls ) {
-        if ( this.urls.hasOwnProperty(key) === false ) {
-            continue;
-        }
         this.urls[key].dispose();
     }
-    this.urls = {};
+    this.urls = Object.create(null);
     this.count = 0;
     if ( this.timer !== null ) {
         clearTimeout(this.timer);
@@ -229,25 +222,23 @@ var frameStoreJunkyardMax = 50;
 
 /******************************************************************************/
 
-var FrameStore = function(rootHostname, frameURL) {
-    this.init(rootHostname, frameURL);
+var FrameStore = function(frameURL) {
+    this.init(frameURL);
 };
 
 /******************************************************************************/
 
-FrameStore.factory = function(rootHostname, frameURL) {
+FrameStore.factory = function(frameURL) {
     var entry = frameStoreJunkyard.pop();
     if ( entry === undefined ) {
-        entry = new FrameStore(rootHostname, frameURL);
-    } else {
-        entry.init(rootHostname, frameURL);
+        return new FrameStore(frameURL);
     }
-    return entry;
+    return entry.init(frameURL);
 };
 
 /******************************************************************************/
 
-FrameStore.prototype.init = function(rootHostname, frameURL) {
+FrameStore.prototype.init = function(frameURL) {
     var µburi = µb.URI;
     this.pageHostname = µburi.hostnameFromURI(frameURL);
     this.pageDomain = µburi.domainFromHostname(this.pageHostname) || this.pageHostname;
@@ -294,39 +285,67 @@ PageStore.factory = function(tabId) {
 PageStore.prototype.init = function(tabId) {
     var tabContext = µb.tabContextManager.mustLookup(tabId);
     this.tabId = tabId;
+
+    // If we are navigating from-to same site, remember whether large
+    // media elements were temporarily allowed.
+    if (
+        typeof this.allowLargeMediaElementsUntil !== 'number' ||
+        tabContext.rootHostname !== this.tabHostname
+    ) {
+        this.allowLargeMediaElementsUntil = 0;
+    }
+
     this.tabHostname = tabContext.rootHostname;
     this.title = tabContext.rawURL;
     this.rawURL = tabContext.rawURL;
     this.hostnameToCountMap = {};
     this.contentLastModified = 0;
-    this.frames = {};
+    this.frames = Object.create(null);
     this.perLoadBlockedRequestCount = 0;
     this.perLoadAllowedRequestCount = 0;
     this.hiddenElementCount = ''; // Empty string means "unknown"
     this.remoteFontCount = 0;
     this.popupBlockedCount = 0;
+    this.largeMediaCount = 0;
+    this.largeMediaTimer = null;
     this.netFilteringCache = NetFilteringResultCache.factory();
 
-    // Support `elemhide` filter option. Called at this point so the required
-    // context is all setup at this point.
-    this.skipCosmeticFiltering = µb.staticNetFilteringEngine.matchStringExactType(
-        this.createContextFromPage(),
-        tabContext.normalURL,
-        'cosmetic-filtering'
-    );
-    if ( this.skipCosmeticFiltering && µb.logger.isEnabled() ) {
-        // https://github.com/gorhill/uBlock/issues/370
-        // Log using `cosmetic-filtering`, not `elemhide`.
+    this.noCosmeticFiltering = µb.hnSwitches.evaluateZ('no-cosmetic-filtering', tabContext.rootHostname) === true;
+    if ( µb.logger.isEnabled() && this.noCosmeticFiltering ) {
         µb.logger.writeOne(
             tabId,
-            'net',
-            µb.staticNetFilteringEngine.toResultString(true),
-            'cosmetic-filtering',
+            'cosmetic',
+            µb.hnSwitches.toResultString(),
+            'dom',
             tabContext.rawURL,
             this.tabHostname,
             this.tabHostname
         );
     }
+
+    // Support `generichide` filter option.
+    this.noGenericCosmeticFiltering = this.noCosmeticFiltering;
+    if ( this.noGenericCosmeticFiltering !== true ) {
+        this.noGenericCosmeticFiltering = µb.staticNetFilteringEngine.matchStringExactType(
+            this.createContextFromPage(),
+            tabContext.normalURL,
+            'elemhide'
+        ) === false;
+        if ( µb.logger.isEnabled() && this.noGenericCosmeticFiltering ) {
+            // https://github.com/gorhill/uBlock/issues/370
+            // Log using `cosmetic-filtering`, not `elemhide`.
+            µb.logger.writeOne(
+                tabId,
+                'net',
+                µb.staticNetFilteringEngine.toResultString(true),
+                'elemhide',
+                tabContext.rawURL,
+                this.tabHostname,
+                this.tabHostname
+            );
+        }
+    }
+
     return this;
 };
 
@@ -354,6 +373,10 @@ PageStore.prototype.reuse = function(context) {
     }
 
     // A new page is completely reloaded from scratch, reset all.
+    if ( this.largeMediaTimer !== null ) {
+        clearTimeout(this.largeMediaTimer);
+        this.largeMediaTimer = null;
+    }
     this.disposeFrameStores();
     this.netFilteringCache = this.netFilteringCache.dispose();
     this.init(this.tabId);
@@ -373,6 +396,11 @@ PageStore.prototype.dispose = function() {
     this.title = '';
     this.rawURL = '';
     this.hostnameToCountMap = null;
+    this.allowLargeMediaElementsUntil = 0;
+    if ( this.largeMediaTimer !== null ) {
+        clearTimeout(this.largeMediaTimer);
+        this.largeMediaTimer = null;
+    }
     this.disposeFrameStores();
     this.netFilteringCache = this.netFilteringCache.dispose();
     if ( pageStoreJunkyard.length < pageStoreJunkyardMax ) {
@@ -386,11 +414,9 @@ PageStore.prototype.dispose = function() {
 PageStore.prototype.disposeFrameStores = function() {
     var frames = this.frames;
     for ( var k in frames ) {
-        if ( frames.hasOwnProperty(k) ) {
-            frames[k].dispose();
-        }
+        frames[k].dispose();
     }
-    this.frames = {};
+    this.frames = Object.create(null);
 };
 
 /******************************************************************************/
@@ -403,26 +429,26 @@ PageStore.prototype.getFrame = function(frameId) {
 
 PageStore.prototype.setFrame = function(frameId, frameURL) {
     var frameStore = this.frames[frameId];
-    if ( frameStore instanceof FrameStore ) {
-        frameStore.init(this.rootHostname, frameURL);
+    if ( frameStore ) {
+        frameStore.init(frameURL);
     } else {
-        this.frames[frameId] = FrameStore.factory(this.rootHostname, frameURL);
+        this.frames[frameId] = FrameStore.factory(frameURL);
     }
 };
 
 /******************************************************************************/
 
 PageStore.prototype.createContextFromPage = function() {
-    var context = new µb.tabContextManager.createContext(this.tabId);
+    var context = µb.tabContextManager.createContext(this.tabId);
     context.pageHostname = context.rootHostname;
     context.pageDomain = context.rootDomain;
     return context;
 };
 
 PageStore.prototype.createContextFromFrameId = function(frameId) {
-    var context = new µb.tabContextManager.createContext(this.tabId);
-    if ( this.frames.hasOwnProperty(frameId) ) {
-        var frameStore = this.frames[frameId];
+    var context = µb.tabContextManager.createContext(this.tabId);
+    var frameStore = this.frames[frameId];
+    if ( frameStore ) {
         context.pageHostname = frameStore.pageHostname;
         context.pageDomain = frameStore.pageDomain;
     } else {
@@ -433,7 +459,7 @@ PageStore.prototype.createContextFromFrameId = function(frameId) {
 };
 
 PageStore.prototype.createContextFromFrameHostname = function(frameHostname) {
-    var context = new µb.tabContextManager.createContext(this.tabId);
+    var context = µb.tabContextManager.createContext(this.tabId);
     context.pageHostname = frameHostname;
     context.pageDomain = µb.URI.domainFromHostname(frameHostname) || frameHostname;
     return context;
@@ -448,16 +474,14 @@ PageStore.prototype.getNetFilteringSwitch = function() {
 /******************************************************************************/
 
 PageStore.prototype.getSpecificCosmeticFilteringSwitch = function() {
-    var tabContext = µb.tabContextManager.lookup(this.tabId);
-    return tabContext !== null &&
-           µb.hnSwitches.evaluateZ('no-cosmetic-filtering', tabContext.rootHostname) !== true;
+    return this.noCosmeticFiltering !== true;
 };
 
 /******************************************************************************/
 
 PageStore.prototype.getGenericCosmeticFilteringSwitch = function() {
-    return this.skipCosmeticFiltering !== true &&
-           this.getSpecificCosmeticFilteringSwitch();
+    return this.noGenericCosmeticFiltering !== true &&
+           this.noCosmeticFiltering !== true;
 };
 
 /******************************************************************************/
@@ -465,6 +489,32 @@ PageStore.prototype.getGenericCosmeticFilteringSwitch = function() {
 PageStore.prototype.toggleNetFilteringSwitch = function(url, scope, state) {
     µb.toggleNetFilteringSwitch(url, scope, state);
     this.netFilteringCache.empty();
+};
+
+/******************************************************************************/
+
+PageStore.prototype.logLargeMedia = (function() {
+    var injectScript = function() {
+        this.largeMediaTimer = null;
+        µb.scriptlets.injectDeep(
+            this.tabId,
+            'load-large-media-interactive'
+        );
+        µb.contextMenu.update(this.tabId);
+    };
+    return function() {
+        this.largeMediaCount += 1;
+        if ( this.largeMediaTimer === null ) {
+            this.largeMediaTimer = vAPI.setTimeout(injectScript.bind(this), 500);
+        }
+    };
+})();
+
+PageStore.prototype.temporarilyAllowLargeMediaElements = function() {
+    this.largeMediaCount = 0;
+    µb.contextMenu.update(this.tabId);
+    this.allowLargeMediaElementsUntil = Date.now() + 86400000;
+    µb.scriptlets.injectDeep(this.tabId, 'load-large-media-all');
 };
 
 /******************************************************************************/

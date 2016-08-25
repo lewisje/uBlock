@@ -32,7 +32,7 @@
     "description":"appears as tab name in dashboard"
   },
   "statsPageName":{
-    "message":"uBlock₀ — Protokolo",
+    "message":"uBlock₀ — Protokolilo",
     "description":"Title for the logger window"
   },
   "aboutPageName":{
@@ -72,24 +72,24 @@
     "description":"English: Enter element picker mode"
   },
   "popupTipLog":{
-    "message":"Malfermi protokolon",
+    "message":"Malfermi la protokolilon",
     "description":"Tooltip used for the logger icon in the panel"
   },
   "popupTipNoPopups":{
     "message":"Baskuligi la blokadon de ŝprucfenestroj por ĉi tiu retejo",
-    "description":"English: Toggle the blocking of all popups for this site"
+    "description":"Tooltip for the no-popups per-site switch"
   },
-  "popupTipNoStrictBlocking":{
-    "message":"Baskuligi striktan blokadon por ĉi tiu retejo",
-    "description":"English: Toggle strict blocking for this site"
+  "popupTipNoLargeMedia":{
+    "message":"Baskuligi la blokadon de grandaj aŭdvideaj elementoj por ĉi tiu retejo",
+    "description":"Tooltip for the no-large-media per-site switch"
   },
   "popupTipNoCosmeticFiltering":{
     "message":"Baskuligi ornaman filtradon por ĉi tiu retejo",
-    "description":"English: Toggle cosmetic filtering for this site"
+    "description":"Tooltip for the no-cosmetic-filtering per-site switch"
   },
   "popupTipNoRemoteFonts":{
     "message":"Baskuligi la blokadon de foraj tiparoj por ĉi tiu retejo",
-    "description":"English: Toggle the blocking of remote fonts for this site"
+    "description":"Tooltip for the no-remote-fonts per-site switch"
   },
   "popupTipGlobalRules":{
     "message":"Ĝeneralaj reguloj: ĉi tiu kolumno estas por reguloj, kiuj aplikas al ĉiuj retejoj.",
@@ -159,6 +159,10 @@
     "message":"Forlasi",
     "description":"English: Quit"
   },
+  "pickerPreview":{
+    "message":"Antaŭrigardo",
+    "description":"Element picker preview mode: will cause the elements matching the current filter to be removed from the page"
+  },
   "pickerNetFilters":{
     "message":"Retaj filtriloj",
     "description":"English: Net filters"
@@ -215,9 +219,25 @@
     "message":"Preventi likado de WebRTC de lokaj IP-adresoj",
     "description":"English: "
   },
-  "settingsExperimentalPrompt":{
-    "message":"Ŝalti eksperimentajn trajtojn (<a href='https:\/\/github.com\/gorhill\/uBlock\/wiki\/Experimental-features'>Pri<\/a>)",
-    "description":"English: Enable experimental features"
+  "settingPerSiteSwitchGroup":{
+    "message":"Defaŭlta konduto",
+    "description":""
+  },
+  "settingPerSiteSwitchGroupSynopsis":{
+    "message":"Tiuj defaŭltaj kondutoj povas esti transpasitaj por ĉiuj retejoj",
+    "description":""
+  },
+  "settingsNoCosmeticFilteringPrompt":{
+    "message":"Malŝalti ornaman filtradon",
+    "description":""
+  },
+  "settingsNoLargeMediaPrompt":{
+    "message":"Bloki aŭdvideajn elementojn pli granda ol {{input:number}} kB",
+    "description":""
+  },
+  "settingsNoRemoteFontsPrompt":{
+    "message":"Bloki forajn tiparojn",
+    "description":""
   },
   "settingsStorageUsed":{
     "message":"Uzata konservado: {{value}} bitokoj",
@@ -233,31 +253,39 @@
   },
   "3pListsOfBlockedHostsPrompt":{
     "message":"{{netFilterCount}} retaj filtriloj kaj {{cosmeticFilterCount}} ornamaj filtriloj de:",
-    "description":"English: {{netFilterCount}} network filters ＋ {{cosmeticFilterCount}} cosmetic filters from:"
+    "description":"Appears at the top of the _3rd-party filters_ pane"
   },
   "3pListsOfBlockedHostsPerListStats":{
     "message":"{{used}} estas uzita de {{total}}",
-    "description":"English: {{used}} used out of {{total}}"
+    "description":"Appears aside each filter list in the _3rd-party filters_ pane"
   },
   "3pAutoUpdatePrompt1":{
     "message":"Ĝisdatigi listojn de filtriloj aŭtomate.",
-    "description":"English: Auto-update filter lists."
+    "description":"A checkbox in the _3rd-party filters_ pane"
   },
   "3pUpdateNow":{
     "message":"Ĝisdatigi nun",
-    "description":"English: Update now"
+    "description":"A button in the in the _3rd-party filters_ pane"
   },
   "3pPurgeAll":{
     "message":"Malplenigi ĉiujn kaŝmemorojn",
-    "description":"English: Purge all caches"
+    "description":"A button in the in the _3rd-party filters_ pane"
   },
   "3pParseAllABPHideFiltersPrompt1":{
     "message":"Analizi kaj eltrudi ornamajn filtrilojn.",
     "description":"English: Parse and enforce Adblock+ element hiding filters."
   },
   "3pParseAllABPHideFiltersInfo":{
-    "message":"<p>Tiu opcio ŝaltas la analizadon kaj eltrudadon de la <a href=\"https:\/\/adblockplus.org\/en\/faq_internal#elemhide\">Adblock Plus-kongruaj &ldquo;elementokaŝadaj&rdquo; filtriloj<\/a>. Ĉi tiuj filtriloj estas nur ornama kaj servas por kaŝi elementojn en retpaĝoj kiuj estas opiniite vidaj ĝenaĵoj kaj ne blokeblaj de la reta peta filtrado.<\/p><p>Ŝalti tiun trajton pligrandigas la memoruzadon de uBlock₀.<\/p>",
-    "description":"This option enables the parsing and enforcing of Adblock Plus-compatible 'element hiding' filters. These filters are essentially cosmetic, they serve to hide elements in a web page which are deemed to be a visual nuisance, and which can't be blocked by the net request-based filtering engine.\n\nEnabling this feature increases uBlock Origin's memory footprint."
+    "message":"<p>Ĉi tiu opcio ŝaltas la analizadon kaj eltrudadon de la <a href=\"https:\/\/adblockplus.org\/en\/faq_internal#elemhide\">Adblock Plus-kongruaj &ldquo;elementokaŝadaj&rdquo; filtriloj<\/a>. Ĉi tiuj filtriloj estas nur ornama kaj servas por kaŝi elementojn en retpaĝoj kiuj estas opiniite vidaj ĝenaĵoj kaj ne blokeblaj de la reta peta filtrado.<\/p><p>Ŝalti ĉi tiun trajton pligrandigas la memoruzadon de uBlock₀.<\/p>",
+    "description":"Describes the purpose of the 'Parse and enforce cosmetic filters' feature."
+  },
+  "3pIgnoreGenericCosmeticFilters":{
+    "message":"Ignori ĝeneralajn ornamajn filtrilojn",
+    "description":"This will cause uBO to ignore all generic cosmetic filters."
+  },
+  "3pIgnoreGenericCosmeticFiltersInfo":{
+    "message":"<p>Generic cosmetic filters are those cosmetic filters which are meant to apply on all web sites.<p>Though handled efficiently by uBlock₀, generic cosmetic filters may still contribute measurable memory and CPU overhead on some web pages, especially for large and long-lived ones.<p>Enabling this option will eliminate the memory and CPU overhead added to web pages as a result of handling generic cosmetic filters, and also lower the memory footprint of uBlock₀ itself.<p>It is recommended to enable this option on less powerful devices.",
+    "description":"Describes the purpose of the 'Ignore generic cosmetic filters' feature."
   },
   "3pListsOfBlockedHostsHeader":{
     "message":"Lists of blocked hosts",
@@ -620,11 +648,15 @@
     "description":"English: Permanently"
   },
   "cloudPush":{
-    "message":"Eksporti al nelokdependa konservado",
+    "message":"Eksporti al nuba konservado",
     "description":"tooltip"
   },
   "cloudPull":{
-    "message":"Importi el nelokdependa konservado",
+    "message":"Importi el nuba konservado",
+    "description":"tooltip"
+  },
+  "cloudPullAndMerge":{
+    "message":"Importi el nuba konservado kaj kunfandi kun nunaj agordoj",
     "description":"tooltip"
   },
   "cloudNoData":{
@@ -646,6 +678,10 @@
   "genericBytes":{
     "message":"bitokoj",
     "description":""
+  },
+  "contextMenuTemporarilyAllowLargeMediaElements":{
+    "message":"Permesi grandajn aŭdvideajn elementojn nedaŭre",
+    "description":"A context menu entry, present when large media elements have been blocked on the current site"
   },
   "dummy":{
     "message":"This entry must be the last one",

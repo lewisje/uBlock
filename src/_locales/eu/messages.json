@@ -72,24 +72,24 @@
     "description":"English: Enter element picker mode"
   },
   "popupTipLog":{
-    "message":"Ireki egunkarira",
+    "message":"Ireki egunkaria",
     "description":"Tooltip used for the logger icon in the panel"
   },
   "popupTipNoPopups":{
     "message":"Txandakatu laster-leihoen blokeoa gune honetan",
-    "description":"English: Toggle the blocking of all popups for this site"
+    "description":"Tooltip for the no-popups per-site switch"
   },
-  "popupTipNoStrictBlocking":{
-    "message":"Txandakatu blokeo zorrotza gune honetan",
-    "description":"English: Toggle strict blocking for this site"
+  "popupTipNoLargeMedia":{
+    "message":"Txandakatu multimedia elementu handiak blokeatzea gune honetan",
+    "description":"Tooltip for the no-large-media per-site switch"
   },
   "popupTipNoCosmeticFiltering":{
-    "message":"Txandakatu blokeo kosmetikoa gune honetan",
-    "description":"English: Toggle cosmetic filtering for this site"
+    "message":"Txandakatu iragazki kosmetikoa gune honetan",
+    "description":"Tooltip for the no-cosmetic-filtering per-site switch"
   },
   "popupTipNoRemoteFonts":{
     "message":"Txandakatu urruneko letra tipoen blokeoa gune honetan",
-    "description":"English: Toggle the blocking of remote fonts for this site"
+    "description":"Tooltip for the no-remote-fonts per-site switch"
   },
   "popupTipGlobalRules":{
     "message":"Arau orokorrak: Zutabe hau gune guztietan aplikatzen diren arauentzat da.",
@@ -159,6 +159,10 @@
     "message":"Irten",
     "description":"English: Quit"
   },
+  "pickerPreview":{
+    "message":"Aurreikusi",
+    "description":"Element picker preview mode: will cause the elements matching the current filter to be removed from the page"
+  },
   "pickerNetFilters":{
     "message":"Sare iragazkiak",
     "description":"English: Net filters"
@@ -215,9 +219,25 @@
     "message":"Galarazi WebRTCk tokiko IP helbidea iragartzea",
     "description":"English: "
   },
-  "settingsExperimentalPrompt":{
-    "message":"Gaitu ezaugarri esperimentalak (<a href='https:\/\/github.com\/gorhill\/uBlock\/wiki\/Experimental-features'>Honi buruz<\/a>)",
-    "description":"English: Enable experimental features"
+  "settingPerSiteSwitchGroup":{
+    "message":"Lehenetsitako portaera",
+    "description":""
+  },
+  "settingPerSiteSwitchGroupSynopsis":{
+    "message":"Lehenetsitako portaera hauek gunez gune gainidatzi daitezke",
+    "description":""
+  },
+  "settingsNoCosmeticFilteringPrompt":{
+    "message":"Desgaitu iragazki kosmetikoa",
+    "description":""
+  },
+  "settingsNoLargeMediaPrompt":{
+    "message":"Blokeatu {{input:number}} kB baino handiagoak diren multimedia elementuak",
+    "description":""
+  },
+  "settingsNoRemoteFontsPrompt":{
+    "message":"Blokeatu urruneko letra-tipoak",
+    "description":""
   },
   "settingsStorageUsed":{
     "message":"Erabilitako biltegiratzea: {{value}} byte",
@@ -233,23 +253,23 @@
   },
   "3pListsOfBlockedHostsPrompt":{
     "message":"{{netFilterCount}} sare iragazki + {{cosmeticFilterCount}} iragazki kosmetiko hemendik:",
-    "description":"English: {{netFilterCount}} network filters ＋ {{cosmeticFilterCount}} cosmetic filters from:"
+    "description":"Appears at the top of the _3rd-party filters_ pane"
   },
   "3pListsOfBlockedHostsPerListStats":{
     "message":"{{used}} erabilita, guztira {{total}}",
-    "description":"English: {{used}} used out of {{total}}"
+    "description":"Appears aside each filter list in the _3rd-party filters_ pane"
   },
   "3pAutoUpdatePrompt1":{
     "message":"Automatikoki eguneratu iragazkien zerrenda.",
-    "description":"English: Auto-update filter lists."
+    "description":"A checkbox in the _3rd-party filters_ pane"
   },
   "3pUpdateNow":{
     "message":"Eguneratu orain",
-    "description":"English: Update now"
+    "description":"A button in the in the _3rd-party filters_ pane"
   },
   "3pPurgeAll":{
     "message":"Garbitu cache guztiak",
-    "description":"English: Purge all caches"
+    "description":"A button in the in the _3rd-party filters_ pane"
   },
   "3pParseAllABPHideFiltersPrompt1":{
     "message":"Prozesatu eta ezarri iragazki kosmetikoak.",
@@ -257,7 +277,15 @@
   },
   "3pParseAllABPHideFiltersInfo":{
     "message":"<p>Aukera honek <a href=\"https:\/\/adblockplus.org\/en\/faq_internal#elemhide\">Adblock Plusekin bateragarriak diren &ldquo;elementuak ezkutatzeko&rdquo; iragazkiak<\/a> prozesatzea eta ezartzea gaitzen du. Iragazki hauek nagusiki kosmetikoak dira, web orri batean itsusitzat jo diren eta sare iragazkien bidez blokeatzerik ez dauden elementuak ezkutatzeko balio dute.<\/p><p>Ezaugarri hau gaitzeak uBlock₀en memoria erabilera handitzen du.<\/p>",
-    "description":"This option enables the parsing and enforcing of Adblock Plus-compatible 'element hiding' filters. These filters are essentially cosmetic, they serve to hide elements in a web page which are deemed to be a visual nuisance, and which can't be blocked by the net request-based filtering engine.\n\nEnabling this feature increases uBlock Origin's memory footprint."
+    "description":"Describes the purpose of the 'Parse and enforce cosmetic filters' feature."
+  },
+  "3pIgnoreGenericCosmeticFilters":{
+    "message":"Ezikusi iragazki kosmetiko orokorrak",
+    "description":"This will cause uBO to ignore all generic cosmetic filters."
+  },
+  "3pIgnoreGenericCosmeticFiltersInfo":{
+    "message":"<p>Iragazki kosmetiko orokorrak webgune guztietan aplikatzeko sortu diren iragazki kosmetikoak dira. <p>uBlock₀ aplikazioak ongi kudeatzen baditu ere iragazki kosmetiko orokorrek wegune batzuetan memoria edo PUZ erabilera nabarmena ekar dezakete handiak eta antzinakoak diren horietan gehienbat. <p>Aukera hau gaituz iragazki kosmetiko orokorren erabileraren ondoriozko memoria eta PUZ erabilera gehigarria sahiestuko da, eta baita uBlock₀ beraren memoria erabilera gutxiagotu. <p> Ahalmen gutxiagoko gailuetan aukera hau gaitzea aholkatzen da.",
+    "description":"Describes the purpose of the 'Ignore generic cosmetic filters' feature."
   },
   "3pListsOfBlockedHostsHeader":{
     "message":"Lists of blocked hosts",
@@ -627,6 +655,10 @@
     "message":"Inportatu hodei biltegiratzetik",
     "description":"tooltip"
   },
+  "cloudPullAndMerge":{
+    "message":"Inportatu hodeiko biltegiratzetik eta nahastu oraingo ezarpenekin",
+    "description":"tooltip"
+  },
   "cloudNoData":{
     "message":"...\n...",
     "description":""
@@ -646,6 +678,10 @@
   "genericBytes":{
     "message":"byte",
     "description":""
+  },
+  "contextMenuTemporarilyAllowLargeMediaElements":{
+    "message":"Une batez baimendu multimedia elementu handiak",
+    "description":"A context menu entry, present when large media elements have been blocked on the current site"
   },
   "dummy":{
     "message":"This entry must be the last one",

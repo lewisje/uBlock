@@ -1,7 +1,7 @@
 /*******************************************************************************
 
-    µBlock - a browser extension to block requests.
-    Copyright (C) 2014 Raymond Hill
+    uBlock Origin - a browser extension to block requests.
+    Copyright (C) 2014-2016 Raymond Hill
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -18,8 +18,6 @@
 
     Home: https://github.com/gorhill/uBlock
 */
-
-/* global vAPI, µBlock */
 
 /******************************************************************************/
 
@@ -55,6 +53,7 @@ var matchWhitelistDirective = function(url, hostname, directive) {
     if ( directive.indexOf('*') === -1 ) {
         return url === directive;
     }
+    // TODO: Revisit implementation to avoid creating a regex each time.
     // Regex escape code inspired from:
     //   "Is there a RegExp.escape function in Javascript?"
     //   http://stackoverflow.com/a/3561711
@@ -177,7 +176,7 @@ var matchWhitelistDirective = function(url, hostname, directive) {
         '#': []
     };
     var reInvalidHostname = /[^a-z0-9.\-\[\]:]/;
-    var reHostnameExtractor = /([a-z0-9\[][a-z0-9.\-:]*[a-z0-9\]])\/(?:[^\x00-\x20\/]|$)[^\x00-\x20]*$/;
+    var reHostnameExtractor = /([a-z0-9\[][a-z0-9.\-]*[a-z0-9\]])(?::[\d*]+)?\/(?:[^\x00-\x20\/]|$)[^\x00-\x20]*$/;
     var lines = s.split(/[\n\r]+/);
     var line, matches, key, directive;
     for ( var i = 0; i < lines.length; i++ ) {
@@ -234,34 +233,44 @@ var matchWhitelistDirective = function(url, hostname, directive) {
 
 /******************************************************************************/
 
-// Return all settings if none specified.
-
 µBlock.changeUserSettings = function(name, value) {
+    var us = this.userSettings;
+
+    // Return all settings if none specified.
     if ( name === undefined ) {
-        return this.userSettings;
+        us = JSON.parse(JSON.stringify(us));
+        us.noCosmeticFiltering = this.hnSwitches.evaluate('no-cosmetic-filtering', '*') === 1;
+        us.noLargeMedia = this.hnSwitches.evaluate('no-large-media', '*') === 1;
+        us.noRemoteFonts = this.hnSwitches.evaluate('no-remote-fonts', '*') === 1;
+        return us;
     }
 
     if ( typeof name !== 'string' || name === '' ) {
         return;
     }
 
-    // Do not allow an unknown user setting to be created
-    if ( this.userSettings[name] === undefined ) {
-        return;
-    }
-
     if ( value === undefined ) {
-        return this.userSettings[name];
+        return us[name];
     }
 
     // Pre-change
     switch ( name ) {
+    case 'largeMediaSize':
+        if ( typeof value !== 'number' ) {
+            value = parseInt(value, 10) || 0;
+        }
+        value = Math.ceil(Math.max(value, 0));
+        break;
     default:
         break;
     }
 
-    // Change
-    this.userSettings[name] = value;
+    // Change -- but only if the user setting actually exists.
+    var mustSave = us.hasOwnProperty(name) &&
+                   value !== us[name];
+    if ( mustSave ) {
+        us[name] = value;
+    }
 
     // Post-change
     switch ( name ) {
@@ -271,12 +280,25 @@ var matchWhitelistDirective = function(url, hostname, directive) {
         }
         break;
     case 'contextMenuEnabled':
-        this.contextMenu.toggle(value);
-        break;
-    case 'experimentalEnabled':
+        this.contextMenu.update(null);
         break;
     case 'hyperlinkAuditingDisabled':
         vAPI.browserSettings.set({ 'hyperlinkAuditing': !value });
+        break;
+    case 'noCosmeticFiltering':
+        if ( this.hnSwitches.toggle('no-cosmetic-filtering', '*', value ? 1 : 0) ) {
+            this.saveHostnameSwitches();
+        }
+        break;
+    case 'noLargeMedia':
+        if ( this.hnSwitches.toggle('no-large-media', '*', value ? 1 : 0) ) {
+            this.saveHostnameSwitches();
+        }
+        break;
+    case 'noRemoteFonts':
+        if ( this.hnSwitches.toggle('no-remote-fonts', '*', value ? 1 : 0) ) {
+            this.saveHostnameSwitches();
+        }
         break;
     case 'prefetchingDisabled':
         vAPI.browserSettings.set({ 'prefetching': !value });
@@ -288,7 +310,9 @@ var matchWhitelistDirective = function(url, hostname, directive) {
         break;
     }
 
-    this.saveUserSettings();
+    if ( mustSave ) {
+        this.saveUserSettings();
+    }
 };
 
 /******************************************************************************/
@@ -307,24 +331,38 @@ var matchWhitelistDirective = function(url, hostname, directive) {
 /******************************************************************************/
 
 µBlock.toggleFirewallRule = function(details) {
+    var requestType = details.requestType;
+
     if ( details.action !== 0 ) {
-        this.sessionFirewall.setCellZ(details.srcHostname, details.desHostname, details.requestType, details.action);
+        this.sessionFirewall.setCellZ(details.srcHostname, details.desHostname, requestType, details.action);
     } else {
-        this.sessionFirewall.unsetCell(details.srcHostname, details.desHostname, details.requestType);
+        this.sessionFirewall.unsetCell(details.srcHostname, details.desHostname, requestType);
     }
 
     // https://github.com/chrisaljoudi/uBlock/issues/731#issuecomment-73937469
     if ( details.persist ) {
         if ( details.action !== 0 ) {
-            this.permanentFirewall.setCellZ(details.srcHostname, details.desHostname, details.requestType, details.action);
+            this.permanentFirewall.setCellZ(details.srcHostname, details.desHostname, requestType, details.action);
         } else {
-            this.permanentFirewall.unsetCell(details.srcHostname, details.desHostname, details.requestType, details.action);
+            this.permanentFirewall.unsetCell(details.srcHostname, details.desHostname, requestType, details.action);
         }
         this.savePermanentFirewallRules();
     }
 
+    // https://github.com/gorhill/uBlock/issues/1662
+    // Flush all cached `net` cosmetic filters if we are dealing with a
+    // collapsible type: any of the cached entries could be a resource on the
+    // target page.
+    var srcHostname = details.srcHostname;
+    if (
+        (srcHostname !== '*') &&
+        (requestType === '*' || requestType === 'image' || requestType === '3p' || requestType === '3p-frame')
+    ) {
+        srcHostname = '*';
+    }
+
     // https://github.com/chrisaljoudi/uBlock/issues/420
-    this.cosmeticFilteringEngine.removeFromSelectorCache(details.srcHostname, 'net');
+    this.cosmeticFilteringEngine.removeFromSelectorCache(srcHostname, 'net');
 };
 
 /******************************************************************************/
@@ -379,16 +417,22 @@ var matchWhitelistDirective = function(url, hostname, directive) {
     }
 
     // Take action if needed
-    if ( details.name === 'no-cosmetic-filtering' ) {
+    switch ( details.name ) {
+    case 'no-cosmetic-filtering':
         this.scriptlets.injectDeep(
             details.tabId,
             details.state ? 'cosmetic-off' : 'cosmetic-on'
         );
-        return;
+        break;
+    case 'no-large-media':
+        if ( details.state === false ) {
+            var pageStore = this.pageStoreFromTabId(details.tabId);
+            if ( pageStore !== null ) {
+                pageStore.temporarilyAllowLargeMediaElements();
+            }
+        }
+        break;
     }
-
-    // Whatever else
-    // ...
 };
 
 /******************************************************************************/

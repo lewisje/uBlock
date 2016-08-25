@@ -1,7 +1,7 @@
 /*******************************************************************************
 
-    uBlock - a browser extension to block requests.
-    Copyright (C) 2014-2015 Raymond Hill
+    uBlock Origin - a browser extension to block requests.
+    Copyright (C) 2014-2016 Raymond Hill
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -22,11 +22,11 @@
 /* jshint bitwise: false */
 /* global punycode */
 
+'use strict';
+
 /******************************************************************************/
 
 µBlock.staticNetFilteringEngine = (function(){
-
-'use strict';
 
 /******************************************************************************/
 
@@ -62,10 +62,12 @@ var typeNameToTypeValue = {
     'xmlhttprequest':  5 << 4,
          'sub_frame':  6 << 4,
               'font':  7 << 4,
-             'other':  8 << 4,
+             'media':  8 << 4,
+         'websocket':  9 << 4,
+             'other': 10 << 4,
           'popunder': 11 << 4,
         'main_frame': 12 << 4,
-'cosmetic-filtering': 13 << 4,
+          'elemhide': 13 << 4,
      'inline-script': 14 << 4,
              'popup': 15 << 4
 };
@@ -79,10 +81,12 @@ var typeValueToTypeName = {
      5: 'xmlhttprequest',
      6: 'subdocument',
      7: 'font',
-     8: 'other',
+     8: 'media',
+     9: 'websocket',
+    10: 'other',
     11: 'popunder',
     12: 'document',
-    13: 'cosmetic-filtering',
+    13: 'elemhide',
     14: 'inline-script',
     15: 'popup'
 };
@@ -100,8 +104,6 @@ var BlockAnyParty = BlockAction | AnyParty;
 var AllowAnyTypeAnyParty = AllowAction | AnyType | AnyParty;
 var AllowAnyType = AllowAction | AnyType;
 var AllowAnyParty = AllowAction | AnyParty;
-
-var reURLPostHostnameAnchors = /[\/?#]/;
 
 // ABP filters: https://adblockplus.org/en/filters
 // regex tester: http://regex101.com/
@@ -168,21 +170,21 @@ var atoi = function(s) {
     return cachedParseInt(s, 10);
 };
 
+// Be sure to not confuse 'example.com' with 'anotherexample.com'
 var isFirstParty = function(domain, hostname) {
-    // Be sure to not confuse 'example.com' with 'anotherexample.com'
     return hostname.endsWith(domain) &&
           (hostname.length === domain.length ||
            hostname.charAt(hostname.length - domain.length - 1) === '.');
 };
 
-var isBadRegex = function(s) {
+var normalizeRegexSource = function(s) {
     try {
-        void new RegExp(s);
+        var re = new RegExp(s);
+        return re.source;
     } catch (ex) {
-        isBadRegex.message = ex.toString();
-        return true;
+        normalizeRegexSource.message = ex.toString();
     }
-    return false;
+    return '';
 };
 
 var alwaysTruePseudoRegex = {
@@ -202,11 +204,17 @@ var strToRegex = function(s, anchor, flags) {
     if ( s === '*' ) {
         return alwaysTruePseudoRegex;
     }
-
+    var anchorToHnStart;
+    if ( s.startsWith('||') ) {
+        s = s.slice(2);
+        anchorToHnStart = s.charCodeAt(0) === 0x2A;
+    }
     // https://www.loggly.com/blog/five-invaluable-techniques-to-improve-regex-performance/
     // https://developer.mozilla.org/en/docs/Web/JavaScript/Guide/Regular_Expressions
+    // Also: remove leading/trailing wildcards -- there is no point.
     var reStr = s.replace(/[.+?${}()|[\]\\]/g, '\\$&')
                  .replace(/\^/g, '(?:[^%.0-9a-z_-]|$)')
+                 .replace(/^\*|\*$/g, '')
                  .replace(/\*/g, '[^ ]*?');
 
     if ( anchor < 0 ) {
@@ -214,7 +222,9 @@ var strToRegex = function(s, anchor, flags) {
     } else if ( anchor > 0 ) {
         reStr += '$';
     }
-
+    if ( anchorToHnStart ) {
+        reStr = '[0-9a-z.-]*?' + reStr;
+    }
     //console.debug('µBlock.staticNetFilteringEngine: created RegExp("%s")', reStr);
     return new RegExp(reStr, flags);
 };
@@ -222,6 +232,26 @@ var strToRegex = function(s, anchor, flags) {
 var toHex = function(n) {
     return n.toString(16);
 };
+
+// First character of match must be within the hostname part of the url.
+var isHnAnchored = function(url, matchStart) {
+    var hnStart = url.indexOf('://');
+    if ( hnStart === -1 ) {
+        return false;
+    }
+    hnStart += 3;
+    if ( matchStart <= hnStart ) {
+        return true;
+    }
+    if ( reURLPostHostnameAnchors.test(url.slice(hnStart, matchStart)) ) {
+        return false;
+    }
+    // https://github.com/gorhill/uBlock/issues/1929
+    // Match only hostname label boundaries.
+    return url.charCodeAt(matchStart - 1) === 0x2E;
+};
+
+var reURLPostHostnameAnchors = /[\/?#]/;
 
 /******************************************************************************/
 
@@ -693,13 +723,8 @@ var FilterPlainHnAnchored = function(s) {
 };
 
 FilterPlainHnAnchored.prototype.match = function(url, tokenBeg) {
-    if ( url.startsWith(this.s, tokenBeg) === false ) {
-        return false;
-    }
-    // Valid only if hostname-valid characters to the left of token
-    var pos = url.indexOf('://');
-    return pos !== -1 &&
-           reURLPostHostnameAnchors.test(url.slice(pos + 3, tokenBeg)) === false;
+    return url.startsWith(this.s, tokenBeg) &&
+           isHnAnchored(url, tokenBeg);
 };
 
 FilterPlainHnAnchored.fid =
@@ -733,16 +758,9 @@ var FilterPlainHnAnchoredHostname = function(s, domainOpt) {
 };
 
 FilterPlainHnAnchoredHostname.prototype.match = function(url, tokenBeg) {
-    if (
-        url.startsWith(this.s, tokenBeg) === false ||
-        this.hostnameTest(this) === false
-    ) {
-        return false;
-    }
-    // Valid only if hostname-valid characters to the left of token
-    var pos = url.indexOf('://');
-    return pos !== -1 &&
-           reURLPostHostnameAnchors.test(url.slice(pos + 3, tokenBeg)) === false;
+    return url.startsWith(this.s, tokenBeg) &&
+           this.hostnameTest(this) &&
+           isHnAnchored(url, tokenBeg);
 };
 
 FilterPlainHnAnchoredHostname.fid =
@@ -846,18 +864,10 @@ var FilterGenericHnAnchored = function(s) {
 
 FilterGenericHnAnchored.prototype.match = function(url) {
     if ( this.re === null ) {
-        this.re = strToRegex(this.s, 0);
+        this.re = strToRegex('||' + this.s, 0);
     }
-    // Quick test first
-    if ( this.re.test(url) === false ) {
-        return false;
-    }
-    // Valid only if begininning of match is within the hostname
-    // part of the url
-    var match = this.re.exec(url);
-    var pos = url.indexOf('://');
-    return pos !== -1 &&
-           reURLPostHostnameAnchors.test(url.slice(pos + 3, match.index)) === false;
+    var matchStart = url.search(this.re);
+    return matchStart !== -1 && isHnAnchored(url, matchStart);
 };
 
 FilterGenericHnAnchored.fid =
@@ -915,7 +925,7 @@ FilterGenericHnAnchoredHostname.fromSelfie = function(s) {
 // Regex-based filters
 
 var FilterRegex = function(s) {
-    this.re = new RegExp(s);
+    this.re = new RegExp(s, 'i');
 };
 
 FilterRegex.prototype.match = function(url) {
@@ -942,7 +952,7 @@ FilterRegex.fromSelfie = function(s) {
 /******************************************************************************/
 
 var FilterRegexHostname = function(s, domainOpt) {
-    this.re = new RegExp(s);
+    this.re = new RegExp(s, 'i');
     this.domainOpt = domainOpt;
     this.hostnameTest = hostnameTestPicker(this);
 };
@@ -1283,8 +1293,8 @@ FilterBucket.fromSelfie = function() {
 /******************************************************************************/
 
 var FilterParser = function() {
-    this.reHostnameRule1 = /^[0-9a-z][0-9a-z.-]*[0-9a-z]$/;
-    this.reHostnameRule2 = /^\**[0-9a-z][0-9a-z.-]*[0-9a-z]\^?$/;
+    this.reHostnameRule1 = /^[0-9a-z][0-9a-z.-]*[0-9a-z]$/i;
+    this.reHostnameRule2 = /^\**[0-9a-z][0-9a-z.-]*[0-9a-z]\^?$/i;
     this.reCleanupHostnameRule2 = /^\**|\^$/g;
     this.reHasWildcard = /[\^\*]/;
     this.reCanTrimCarets1 = /^[^*]*$/;
@@ -1307,10 +1317,12 @@ FilterParser.prototype.toNormalizedType = {
     'xmlhttprequest': 'xmlhttprequest',
        'subdocument': 'sub_frame',
               'font': 'font',
+             'media': 'media',
+         'websocket': 'websocket',
              'other': 'other',
           'popunder': 'popunder',
           'document': 'main_frame',
-          'elemhide': 'cosmetic-filtering',
+          'elemhide': 'elemhide',
      'inline-script': 'inline-script',
              'popup': 'popup'
 };
@@ -1353,11 +1365,13 @@ FilterParser.prototype.parseOptType = function(raw, not) {
     }
 
     // Negated type: set all valid network request type bits to 1
-    if ( this.types === 0 ) {
-        this.types = allNetRequestTypesBitmap;
+    if (
+        (typeBit & allNetRequestTypesBitmap) !== 0 &&
+        (this.types & allNetRequestTypesBitmap) === 0
+    ) {
+        this.types |= allNetRequestTypesBitmap;
     }
-
-    this.types &= ~typeBit & allNetRequestTypesBitmap;
+    this.types &= ~typeBit;
 };
 
 /******************************************************************************/
@@ -1395,7 +1409,6 @@ FilterParser.prototype.parseOptions = function(s) {
         if ( opt === 'elemhide' || opt === 'generichide' ) {
             if ( this.action === AllowAction ) {
                 this.parseOptType('elemhide', false);
-                this.action = BlockAction;
                 continue;
             }
             this.unsupported = true;
@@ -1498,11 +1511,15 @@ FilterParser.prototype.parse = function(raw) {
     if ( s.startsWith('/') && s.endsWith('/') && s.length > 2 ) {
         this.isRegex = true;
         this.f = s.slice(1, -1);
-        if ( isBadRegex(this.f) ) {
+        // https://github.com/gorhill/uBlock/issues/1246
+        // If the filter is valid, use the corrected version of the source
+        // string -- this ensure reverse-lookup will work fine.
+        this.f = normalizeRegexSource(this.f);
+        if ( this.f === '' ) {
             console.error(
                 "uBlock Origin> discarding bad regular expression-based network filter '%s': '%s'",
                 raw,
-                isBadRegex.message
+                normalizeRegexSource.message
             );
             this.unsupported = true;
         }
@@ -1530,7 +1547,10 @@ FilterParser.prototype.parse = function(raw) {
         }
 
         // plain hostname? (from ABP filter list)
-        if ( this.reHostnameRule2.test(s) ) {
+        // https://github.com/gorhill/uBlock/issues/1757
+        // A filter can't be a pure-hostname one if there is a domain option
+        // present.
+        if ( this.domainOpt === '' && this.reHostnameRule2.test(s) ) {
             this.f = s.replace(this.reCleanupHostnameRule2, '');
             this.hostnamePure = true;
             return this;
@@ -1552,7 +1572,11 @@ FilterParser.prototype.parse = function(raw) {
     // normalize placeholders
     if ( this.reHasWildcard.test(s) ) {
         // remove pointless leading *
-        if ( s.startsWith('*') ) {
+        // https://github.com/gorhill/uBlock/issues/1669#issuecomment-224822448
+        // Keep the leading asterisk if we are dealing with a hostname-anchored
+        // filter, this will ensure the generic filter implementation is
+        // used.
+        if ( s.startsWith('*') && this.hostnameAnchored === false ) {
             s = s.replace(/^\*+([^%0-9a-z])/, '$1');
         }
         // remove pointless trailing *
@@ -1675,7 +1699,7 @@ FilterContainer.prototype.reset = function() {
     this.rejectedCount = 0;
     this.allowFilterCount = 0;
     this.blockFilterCount = 0;
-    this.duplicateCount = 0;
+    this.discardedCount = 0;
     this.duplicateBuster = {};
     this.categories = Object.create(null);
     this.filterParser.reset();
@@ -1771,7 +1795,7 @@ FilterContainer.prototype.toSelfie = function() {
         rejectedCount: this.rejectedCount,
         allowFilterCount: this.allowFilterCount,
         blockFilterCount: this.blockFilterCount,
-        duplicateCount: this.duplicateCount,
+        discardedCount: this.discardedCount,
         categories: categoriesToSelfie(this.categories)
     };
 };
@@ -1785,7 +1809,7 @@ FilterContainer.prototype.fromSelfie = function(selfie) {
     this.rejectedCount = selfie.rejectedCount;
     this.allowFilterCount = selfie.allowFilterCount;
     this.blockFilterCount = selfie.blockFilterCount;
-    this.duplicateCount = selfie.duplicateCount;
+    this.discardedCount = selfie.discardedCount;
 
     var catKey, tokenKey;
     var dict = this.categories, subdict;
@@ -1930,9 +1954,11 @@ FilterContainer.prototype.compile = function(raw, out) {
 
 FilterContainer.prototype.compileHostnameOnlyFilter = function(parsed, out) {
     // Can't fit the filter in a pure hostname dictionary.
-    if ( parsed.domainOpt.length !== 0 ) {
-        return;
-    }
+    // https://github.com/gorhill/uBlock/issues/1757
+    // This should no longer happen with fix to above issue.
+    //if ( parsed.domainOpt.length !== 0 ) {
+    //    return;
+    //}
 
     var party = AnyParty;
     if ( parsed.firstParty !== parsed.thirdParty ) {
@@ -1971,10 +1997,6 @@ FilterContainer.prototype.compileHostnameOnlyFilter = function(parsed, out) {
 
 FilterContainer.prototype.compileFilter = function(parsed, out) {
     parsed.makeToken();
-    if ( parsed.token === '*' && parsed.hostnameAnchored ) {
-        console.error('FilterContainer.compileFilter("%s"): invalid filter', parsed.f);
-        return false;
-    }
 
     var party = AnyParty;
     if ( parsed.firstParty !== parsed.thirdParty ) {
@@ -2037,22 +2059,15 @@ FilterContainer.prototype.compileToAtomicFilter = function(filterClass, parsed, 
 
 /******************************************************************************/
 
-FilterContainer.prototype.fromCompiledContent = function(text, lineBeg) {
-    var lineEnd;
-    var textEnd = text.length;
+FilterContainer.prototype.fromCompiledContent = function(lineIter) {
     var line, fields, bucket, entry, factory, filter;
 
-    while ( lineBeg < textEnd ) {
-        if ( text.charCodeAt(lineBeg) !== 0x6E /* 'n' */ ) {
-            return lineBeg;
+    while ( lineIter.eot() === false ) {
+        if ( lineIter.text.charCodeAt(lineIter.offset) !== 0x6E /* 'n' */ ) {
+            return;
         }
-        lineEnd = text.indexOf('\n', lineBeg);
-        if ( lineEnd === -1 ) {
-            lineEnd = textEnd;
-        }
-        line = text.slice(lineBeg + 2, lineEnd);
+        line = lineIter.next().slice(2);
         fields = line.split('\v');
-        lineBeg = lineEnd + 1;
 
         // Special cases: delegate to more specialized engines.
         // Redirect engine.
@@ -2075,13 +2090,13 @@ FilterContainer.prototype.fromCompiledContent = function(text, lineBeg) {
                 entry = bucket['.'] = new FilterHostnameDict();
             }
             if ( entry.add(fields[2]) === false ) {
-                this.duplicateCount += 1;
+                this.discardedCount += 1;
             }
             continue;
         }
 
         if ( this.duplicateBuster.hasOwnProperty(line) ) {
-            this.duplicateCount += 1;
+            this.discardedCount += 1;
             continue;
         }
         this.duplicateBuster[line] = true;
@@ -2106,7 +2121,6 @@ FilterContainer.prototype.fromCompiledContent = function(text, lineBeg) {
         }
         bucket[fields[1]] = new FilterBucket(entry, filter);
     }
-    return textEnd;
 };
 
 /******************************************************************************/
@@ -2218,11 +2232,13 @@ FilterContainer.prototype.filterRegexFromCompiled = function(compiled, flags) {
     case '1ah':
     case '_':
     case '_h':
+        re = strToRegex(tfields[0], 0, flags);
+        break;
     case '||a':
     case '||ah':
     case '||_':
     case '||_h':
-        re = strToRegex(tfields[0], 0, flags);
+        re = strToRegex('||' + tfields[0], 0, flags);
         break;
     case '|a':
     case '|ah':
@@ -2310,6 +2326,21 @@ FilterContainer.prototype.matchStringExactType = function(context, requestURL, r
 
     var categories = this.categories;
     var key, bucket;
+
+    // https://github.com/gorhill/uBlock/issues/1477
+    // Special case: blocking elemhide filter ALWAYS exists, it is implicit --
+    // thus we always and only check for exception filters.
+    if ( requestType === 'elemhide' ) {
+        key = AllowAnyParty | type;
+        if (
+            (bucket = categories[toHex(key)]) &&
+            this.matchTokens(bucket, url)
+        ) {
+            this.keyRegister = key;
+            return false;
+        }
+        return undefined;
+    }
 
     // https://github.com/chrisaljoudi/uBlock/issues/139
     // Test against important block filters
@@ -2543,7 +2574,7 @@ FilterContainer.prototype.toResultString = function(verbose) {
 /******************************************************************************/
 
 FilterContainer.prototype.getFilterCount = function() {
-    return this.acceptedCount - this.duplicateCount;
+    return this.acceptedCount - this.discardedCount;
 };
 
 /******************************************************************************/

@@ -1,7 +1,7 @@
 /*******************************************************************************
 
-    uBlock - a browser extension to block requests.
-    Copyright (C) 2014-2015 Raymond Hill
+    uBlock Origin - a browser extension to block requests.
+    Copyright (C) 2014-2016 Raymond Hill
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -18,8 +18,6 @@
 
     Home: https://github.com/gorhill/uBlock
 */
-
-/* global vAPI, µBlock */
 
 /******************************************************************************/
 /******************************************************************************/
@@ -202,6 +200,7 @@ housekeep itself.
         this.rootDomain = '';
         this.commitTimer = null;
         this.gcTimer = null;
+        this.onGCBarrier = false;
         this.netFiltering = true;
         this.netFilteringReadTime = 0;
 
@@ -228,11 +227,21 @@ housekeep itself.
     };
 
     TabContext.prototype.onGC = function() {
-        this.gcTimer = null;
         if ( vAPI.isBehindTheSceneTabId(this.tabId) ) {
             return;
         }
+        // https://github.com/gorhill/uBlock/issues/1713
+        // For unknown reasons, Firefox's setTimeout() will sometimes
+        // causes the callback function to be called immediately, bypassing
+        // the main event loop. For now this should prevent uBO from crashing
+        // as a result of the bad setTimeout() behavior.
+        if ( this.onGCBarrier ) {
+            return;
+        }
+        this.onGCBarrier = true;
+        this.gcTimer = null;
         vAPI.tabs.get(this.tabId, this.onTab.bind(this));
+        this.onGCBarrier = false;
     };
 
     // https://github.com/gorhill/uBlock/issues/248
@@ -286,7 +295,7 @@ housekeep itself.
         this.rawURL = stackEntry.url;
         this.normalURL = µb.normalizePageURL(this.tabId, this.rawURL);
         this.rootHostname = µb.URI.hostnameFromURI(this.normalURL);
-        this.rootDomain = µb.URI.domainFromHostname(this.rootHostname);
+        this.rootDomain = µb.URI.domainFromHostname(this.rootHostname) || this.rootHostname;
     };
 
     // Called whenever a candidate root URL is spotted for the tab.
@@ -407,7 +416,11 @@ housekeep itself.
     })();
 
     // Context object, typically to be used to feed filtering engines.
+    var contextJunkyard = [];
     var Context = function(tabId) {
+        this.init(tabId);
+    };
+    Context.prototype.init = function(tabId) {
         var tabContext = lookup(tabId);
         this.rootHostname = tabContext.rootHostname;
         this.rootDomain = tabContext.rootDomain;
@@ -416,9 +429,16 @@ housekeep itself.
         this.requestURL =
         this.requestHostname =
         this.requestDomain = '';
+        return this;
+    };
+    Context.prototype.dispose = function() {
+        contextJunkyard.push(this);
     };
 
     var createContext = function(tabId) {
+        if ( contextJunkyard.length ) {
+            return contextJunkyard.pop().init(tabId);
+        }
         return new Context(tabId);
     };
 
@@ -524,6 +544,11 @@ vAPI.tabs.onPopupUpdated = (function() {
     // See if two URLs are different, disregarding scheme -- because the scheme
     // can be unilaterally changed by the browser.
     var areDifferentURLs = function(a, b) {
+        // https://github.com/gorhill/uBlock/issues/1378
+        // Maybe no link element was clicked.
+        if ( b === '' ) {
+            return true;
+        }
         var pos = a.indexOf('://');
         if ( pos === -1 ) {
             return false;
@@ -560,7 +585,7 @@ vAPI.tabs.onPopupUpdated = (function() {
         if ( openerHostname !== '' ) {
             // Check user switch first
             if (
-                popupType !== 'popunder' &&
+                typeof clickedURL === 'string' &&
                 areDifferentURLs(targetURL, clickedURL) &&
                 µb.hnSwitches.evaluateZ('no-popups', openerHostname)
             ) {
@@ -591,14 +616,92 @@ vAPI.tabs.onPopupUpdated = (function() {
         // https://github.com/chrisaljoudi/uBlock/issues/323
         // https://github.com/chrisaljoudi/uBlock/issues/1142
         //   Don't block if uBlock is turned off in popup's context
+        var snfe = µb.staticNetFilteringEngine;
         if (
             µb.getNetFilteringSwitch(targetURL) &&
-            µb.staticNetFilteringEngine.matchStringExactType(context, targetURL, popupType) !== undefined
+            snfe.matchStringExactType(context, targetURL, popupType) !== undefined
         ) {
-            return µb.staticNetFilteringEngine.toResultString(µb.logger.isEnabled());
+            return snfe.toResultString(µb.logger.isEnabled());
         }
 
         return '';
+    };
+
+    var mapPopunderResult = function(popunderURL, popunderHostname, result) {
+        if ( result.startsWith('sb:') === false ) {
+            return '';
+        }
+        var snfe = µb.staticNetFilteringEngine;
+        var token = snfe.tokenRegister;
+        if ( token === '*' ) {
+            return '';
+        }
+        if ( token === '.' ) {
+            return result;
+        }
+        result = snfe.toResultString(true);
+        var re = snfe.filterRegexFromCompiled(result.slice(3));
+        if ( re === null ) {
+            return '';
+        }
+        var matches = re.exec(popunderURL);
+        if ( matches === null ) {
+            return '';
+        }
+        var beg = matches.index,
+            end = beg + matches[0].length,
+            pos = popunderURL.indexOf(popunderHostname);
+        if ( pos === -1 ) {
+            return '';
+        }
+        // https://github.com/gorhill/uBlock/issues/1471
+        //   We test whether the opener hostname as at least one character
+        //   within matched portion of URL.
+        // https://github.com/gorhill/uBlock/issues/1903
+        //   Ignore filters which cause a match before the start of the
+        //   hostname in the URL.
+        return beg >= pos &&
+               beg < pos + popunderHostname.length &&
+               end > pos ?
+           result :
+           '';
+    };
+
+    var popunderMatch = function(openerURL, targetURL) {
+        var result = popupMatch(targetURL, openerURL, null, 'popunder');
+        if ( µb.isBlockResult(result) ) {
+            return result;
+        }
+        // https://github.com/gorhill/uBlock/issues/1010#issuecomment-186824878
+        //   Check the opener tab as if it were the newly opened tab: if there
+        //   is a hit against a popup filter, and if the matching filter is not
+        //   a broad one, we will consider the opener tab to be a popunder tab.
+        //   For now, a "broad" filter is one which does not touch any part of
+        //   the hostname part of the opener URL.
+        var popunderURL = openerURL;
+        var popunderHostname = µb.URI.hostnameFromURI(popunderURL);
+        if ( popunderHostname === '' ) {
+            return '';
+        }
+        result = mapPopunderResult(
+            popunderURL,
+            popunderHostname,
+            popupMatch(targetURL, popunderURL, null, 'popup')
+        );
+        if ( result !== '' ) {
+            return result;
+        }
+        // https://github.com/gorhill/uBlock/issues/1598
+        // Try to find a match against origin part of the opener URL.
+        popunderURL = µb.URI.originFromURI(popunderURL);
+        if ( popunderURL === '' ) {
+            return '';
+        }
+        return mapPopunderResult(
+            popunderURL,
+            popunderHostname,
+            popupMatch(targetURL, popunderURL, null, 'popup')
+        );
     };
 
     return function(targetTabId, openerTabId) {
@@ -620,6 +723,11 @@ vAPI.tabs.onPopupUpdated = (function() {
             return;
         }
 
+        // https://github.com/gorhill/uBlock/issues/1538
+        if ( µb.getNetFilteringSwitch(µb.normalizePageURL(openerTabId, openerURL)) === false ) {
+            return;
+        }
+
         // If the page URL is that of our "blocked page" URL, extract the URL of
         // the page which was blocked.
         if ( targetURL.startsWith(vAPI.getURL('document-blocked.html')) ) {
@@ -631,23 +739,24 @@ vAPI.tabs.onPopupUpdated = (function() {
 
         // Popup test.
         var popupType = 'popup';
-        var result = popupMatch(openerURL, targetURL, µb.mouseURL, popupType);
+        var result = popupMatch(openerURL, targetURL, µb.mouseURL, 'popup');
 
         // Popunder test.
         if ( result === '' ) {
-            var tmp = openerTabId; openerTabId = targetTabId; targetTabId = tmp;
-            popupType = 'popunder';
-            result = popupMatch(targetURL, openerURL, µb.mouseURL, popupType);
+            result = popunderMatch(openerURL, targetURL);
+            if ( µb.isBlockResult(result) ) {
+                popupType = 'popunder';
+            }
         }
 
         // Log only for when there was a hit against an actual filter (allow or block).
-        if ( result !== '' && µb.logger.isEnabled() ) {
+        if ( µb.logger.isEnabled() ) {
             µb.logger.writeOne(
-                openerTabId,
+                popupType === 'popup' ? openerTabId : targetTabId,
                 'net',
                 result,
                 popupType,
-                context.requestURL,
+                popupType === 'popup' ? targetURL : openerURL,
                 µb.URI.hostnameFromURI(context.rootURL),
                 µb.URI.hostnameFromURI(context.rootURL)
             );
@@ -672,8 +781,13 @@ vAPI.tabs.onPopupUpdated = (function() {
         }
 
         // It is a popup, block and remove the tab.
-        µb.unbindTabFromPageStats(targetTabId);
-        vAPI.tabs.remove(targetTabId, true);
+        if ( popupType === 'popup' ) {
+            µb.unbindTabFromPageStats(targetTabId);
+            vAPI.tabs.remove(targetTabId, true);
+        } else {
+            µb.unbindTabFromPageStats(openerTabId);
+            vAPI.tabs.remove(openerTabId, true);
+        }
 
         return true;
     };
@@ -746,6 +860,10 @@ vAPI.tabs.registerListeners();
     return this.pageStores[tabId] || null;
 };
 
+µb.mustPageStoreFromTabId = function(tabId) {
+    return this.pageStores[tabId] || this.pageStores[vAPI.noTabId];
+};
+
 /******************************************************************************/
 
 // Permanent page store for behind-the-scene requests. Must never be removed.
@@ -784,7 +902,7 @@ vAPI.tabs.registerListeners();
         if ( vAPI.isBehindTheSceneTabId(tabId) ) {
             return;
         }
-        tabIdToTimer[tabId] = vAPI.setTimeout(updateBadge.bind(this, tabId), 500);
+        tabIdToTimer[tabId] = vAPI.setTimeout(updateBadge.bind(this, tabId), 666);
     };
 })();
 

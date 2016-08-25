@@ -4,7 +4,7 @@
     "description":"extension name."
   },
   "extShortDesc":{
-    "message":"অবশেষে, একটি দক্ষ প্রতিরোধক। সিপিইউ এবং মেমরির জন্য সহজ।",
+    "message":"অবশেষে, একটি দক্ষ প্রতিরোধকারী। সিপিইউ এবং মেমরির জন্য হালকা।",
     "description":"this will be in the chrome web store: must be 132 characters or less"
   },
   "dashboardName":{
@@ -77,19 +77,19 @@
   },
   "popupTipNoPopups":{
     "message":"এই সাইটের জন্য সব পপআপ অবরোধ টগল করুন",
-    "description":"English: Toggle the blocking of all popups for this site"
+    "description":"Tooltip for the no-popups per-site switch"
   },
-  "popupTipNoStrictBlocking":{
-    "message":"এই সাইটের জন্য কঠোর অবরোধ টগল করুন",
-    "description":"English: Toggle strict blocking for this site"
+  "popupTipNoLargeMedia":{
+    "message":"এই সাইটের জন্য বৃহৎ মিডিয়া উপাদানের অবরোধ টগল করুন",
+    "description":"Tooltip for the no-large-media per-site switch"
   },
   "popupTipNoCosmeticFiltering":{
     "message":"এই সাইটের জন্য প্রসাধনী ফিল্টারিং টগল করুন",
-    "description":"English: Toggle cosmetic filtering for this site"
+    "description":"Tooltip for the no-cosmetic-filtering per-site switch"
   },
   "popupTipNoRemoteFonts":{
     "message":"এই সাইটের রিমোট ফন্টের অবরোধ টগল করুন",
-    "description":"English: Toggle the blocking of remote fonts for this site"
+    "description":"Tooltip for the no-remote-fonts per-site switch"
   },
   "popupTipGlobalRules":{
     "message":"বৈশ্বিক নিয়ম: এই কলামটি নিয়মের জন্য যা সকল সাইটে প্রয়োগ করা হবে।",
@@ -159,6 +159,10 @@
     "message":"প্রস্থান",
     "description":"English: Quit"
   },
+  "pickerPreview":{
+    "message":"প্রাকদর্শন",
+    "description":"Element picker preview mode: will cause the elements matching the current filter to be removed from the page"
+  },
   "pickerNetFilters":{
     "message":"নেট ফিল্টার",
     "description":"English: Net filters"
@@ -215,9 +219,25 @@
     "message":"স্থানীয় IP ঠিকানা ফাঁস থেকে WebRTC কে প্রতিরোধ করে",
     "description":"English: "
   },
-  "settingsExperimentalPrompt":{
-    "message":"পরীক্ষামূলক বৈশিষ্ট্য সক্রিয় করুন (<a href='https:\/\/github.com\/gorhill\/uBlock\/wiki\/Experimental-features'>সম্পর্কে<\/a>)",
-    "description":"English: Enable experimental features"
+  "settingPerSiteSwitchGroup":{
+    "message":"পূর্বনির্ধারিত আচরণ",
+    "description":""
+  },
+  "settingPerSiteSwitchGroupSynopsis":{
+    "message":"এই পূর্বনির্ধারিত আচরণ প্রতি সাইট ভিত্তিতে ওভাররাইড করা যেতে পারে",
+    "description":""
+  },
+  "settingsNoCosmeticFilteringPrompt":{
+    "message":"প্রসাধন ফিল্টারিং নিষ্ক্রিয় করুন",
+    "description":""
+  },
+  "settingsNoLargeMediaPrompt":{
+    "message":"{{input:number}} কেবির থেকে বড় মিডিয়া উপাদান অবরুদ্ধ করুন",
+    "description":""
+  },
+  "settingsNoRemoteFontsPrompt":{
+    "message":"রিমোট ফন্ট অবরুদ্ধ করুন",
+    "description":""
   },
   "settingsStorageUsed":{
     "message":"সংগ্রহস্থল ব্যবহার: {{value}} বাইট",
@@ -233,23 +253,23 @@
   },
   "3pListsOfBlockedHostsPrompt":{
     "message":"এ থেকে {{netFilterCount}}টি নেটওয়ার্ক ফিল্টার + {{cosmeticFilterCount}}টি প্রসাধনী ফিল্টার:",
-    "description":"English: {{netFilterCount}} network filters ＋ {{cosmeticFilterCount}} cosmetic filters from:"
+    "description":"Appears at the top of the _3rd-party filters_ pane"
   },
   "3pListsOfBlockedHostsPerListStats":{
     "message":"{{total}}টির মধ্যে {{used}}টি ব্যবহৃত",
-    "description":"English: {{used}} used out of {{total}}"
+    "description":"Appears aside each filter list in the _3rd-party filters_ pane"
   },
   "3pAutoUpdatePrompt1":{
     "message":"ফিল্টার তালিকা স্বয়ংক্রিয়-হালনাগাদ করুন।",
-    "description":"English: Auto-update filter lists."
+    "description":"A checkbox in the _3rd-party filters_ pane"
   },
   "3pUpdateNow":{
     "message":"এখনই হালনাগাদ করুন",
-    "description":"English: Update now"
+    "description":"A button in the in the _3rd-party filters_ pane"
   },
   "3pPurgeAll":{
     "message":"সব ক্যাশে শোধন করুন",
-    "description":"English: Purge all caches"
+    "description":"A button in the in the _3rd-party filters_ pane"
   },
   "3pParseAllABPHideFiltersPrompt1":{
     "message":"প্রসাধনী ফিল্টার পার্স ও কার্যকর করুন।",
@@ -257,7 +277,15 @@
   },
   "3pParseAllABPHideFiltersInfo":{
     "message":"<p>এই অপশনটি <a href=\"https:\/\/adblockplus.org\/en\/faq_internal#elemhide\">অ্যাডব্লক-প্লাসের সামঞ্জস্যপূর্ণ &ldquo;উপাদান আড়াল করার&rdquo; ফিল্টারকে<\/a> সক্রিয় করবে। এই ফিল্টারগুলি মূলত প্রসাধনী, তাদের একটি ওয়েব পাতায় উপাদান আড়াল করতে প্রয়োজন হয় যাকে চাক্ষুষ উত্পাত বলিয়া গণ্য করা হয়, এবং যাদের নেট অনুরোধ ভিত্তিক ফিল্টারিং ইঞ্জিন দ্বারা অবরুদ্ধ করা যায় না।<\/p><p>এই বৈশিষ্ট্য সক্রিয় করলে uBlock₀-এর মেমরির পদচিহ্ন বৃদ্ধি পাবে।<\/p>",
-    "description":"This option enables the parsing and enforcing of Adblock Plus-compatible 'element hiding' filters. These filters are essentially cosmetic, they serve to hide elements in a web page which are deemed to be a visual nuisance, and which can't be blocked by the net request-based filtering engine.\n\nEnabling this feature increases uBlock Origin's memory footprint."
+    "description":"Describes the purpose of the 'Parse and enforce cosmetic filters' feature."
+  },
+  "3pIgnoreGenericCosmeticFilters":{
+    "message":"জেরেরিক প্রসাধনী ছাঁকনি উপেক্ষা করুন।",
+    "description":"This will cause uBO to ignore all generic cosmetic filters."
+  },
+  "3pIgnoreGenericCosmeticFiltersInfo":{
+    "message":"<p>জেনেরিক প্রসাধনী ছাঁকনি হচ্ছে সেইসব প্রসাধনী ছাঁকনি যা সব ওয়েবসাইটে প্রয়োগের জন্য অভিপ্রেত।<p>যদিও তা uBlock₀ দ্বারা দক্ষতার সঙ্গে পরিচালনা করে, কিন্তু জেনেরিক প্রসাধন ফিল্টার এখনও কিছু ওয়েব পাতার পরিমাপযোগ্য মেমরি ও CPU-র অত্যাধিক চাপ সৃষ্টিতে অবদান রাখতে পারে, বিশেষ করে বড় এবং দীর্ঘ একটিতে।<p>এই অপশন সক্রিয় করলে জেনেরিক প্রসাধনী ছাঁকনি পরিচালিত হবে যা ওয়েব পাতার পরিমাপযোগ্য মেমরি ও CPU-র অত্যাধিক চাপ সৃষ্টি দূর করবে এবং uBlock₀ নিজেই মেমরি পদাঙ্ক অর্ধ করবে।<p>এটা কম শক্তিশালী ডিভাইসে এই অপশনটি সক্রিয় করার জন্য সুপারিশ করা হচ্ছে।",
+    "description":"Describes the purpose of the 'Ignore generic cosmetic filters' feature."
   },
   "3pListsOfBlockedHostsHeader":{
     "message":"অবরুদ্ধ হোস্টের তালিকা",
@@ -627,6 +655,10 @@
     "message":"ক্লাউড সঞ্চয় থেকে আমদানি করুন",
     "description":"tooltip"
   },
+  "cloudPullAndMerge":{
+    "message":"ক্লাউড সংগ্রহস্থল থেকে আমদানি করে বর্তমানে সেটিংসের সঙ্গে একত্রীকরণ করুন",
+    "description":"tooltip"
+  },
   "cloudNoData":{
     "message":"...\n...",
     "description":""
@@ -646,6 +678,10 @@
   "genericBytes":{
     "message":"বাইট",
     "description":""
+  },
+  "contextMenuTemporarilyAllowLargeMediaElements":{
+    "message":"সাময়িকভাবে বৃহৎ মিডিয়া উপাদান মঞ্জুরি দিন",
+    "description":"A context menu entry, present when large media elements have been blocked on the current site"
   },
   "dummy":{
     "message":"This entry must be the last one",

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # This script assumes a linux environment
 
@@ -8,8 +8,8 @@ DES=dist/build/uBlock0.firefox
 rm -rf $DES
 mkdir -p $DES
 
-cp -R assets                            $DES/
-rm    $DES/assets/*.sh
+bash ./tools/make-assets.sh $DES
+
 cp -R src/css                           $DES/
 cp -R src/img                           $DES/
 cp -R src/js                            $DES/
@@ -32,13 +32,14 @@ cp    platform/firefox/*.xul            $DES/
 cp    LICENSE.txt                       $DES/
 
 echo "*** uBlock0.firefox: Generating meta..."
-python tools/make-firefox-meta.py $DES/ "$2"
+python tools/make-firefox-meta.py $DES/
 
 if [ "$1" = all ]; then
+    set +v
     echo "*** uBlock0.firefox: Creating package..."
-    pushd $DES/
+    pushd $DES/ > /dev/null
     zip ../uBlock0.firefox.xpi -qr *
-    popd
+    popd > /dev/null
 fi
 
 echo "*** uBlock0.firefox: Package done."

@@ -1,7 +1,7 @@
 /*******************************************************************************
 
     uBlock Origin - a browser extension to block requests.
-    Copyright (C) 2015 Raymond Hill
+    Copyright (C) 2015-2016 Raymond Hill
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -19,8 +19,6 @@
     Home: https://github.com/gorhill/uBlock
 */
 
-/* global vAPI, HTMLDocument, XMLDocument */
-
 /******************************************************************************/
 /******************************************************************************/
 
@@ -30,20 +28,7 @@
 
 /******************************************************************************/
 
-// https://github.com/gorhill/uBlock/issues/464
-if ( document instanceof HTMLDocument === false ) {
-    // https://github.com/chrisaljoudi/uBlock/issues/1528
-    // A XMLDocument can be a valid HTML document.
-    if (
-        document instanceof XMLDocument === false ||
-        document.createElement('div') instanceof HTMLDivElement === false
-    ) {
-        return;
-    }
-}
-
-// This can happen
-if ( typeof vAPI !== 'object' ) {
+if ( typeof vAPI !== 'object' || !vAPI.domFilterer ) {
     return;
 }
 
@@ -151,8 +136,6 @@ var cssEscape = (function(/*root*/) {
 
 /******************************************************************************/
 /******************************************************************************/
-
-var localMessager = vAPI.messaging.channel('dom-inspector.js');
 
 // Highlighter-related
 var svgRoot = null;
@@ -707,19 +690,19 @@ var cosmeticFilterMapper = (function() {
     //   Not all target nodes have necessarily been force-hidden,
     //   do it now so that the inspector does not unhide these
     //   nodes when disabling style tags.
-    var nodesFromStyleTag = function(styleTag, rootNode) {
-        var filterMap = nodeToCosmeticFilterMap;
-        var styleText = styleTag.textContent;
-        var selectors = styleText.slice(0, styleText.lastIndexOf('\n')).split(/,\n/);
-        var i = selectors.length;
-        var selector, nodes, j, node;
+    var nodesFromStyleTag = function(rootNode) {
+        var filterMap = nodeToCosmeticFilterMap,
+            selectors, selector,
+            nodes, node,
+            i, j;
+
+        // CSS-based selectors: simple one.
+        selectors = vAPI.domFilterer.job2._0;
+        i = selectors.length;
         while ( i-- ) {
-            // https://github.com/gorhill/uBlock/issues/1015
-            // Discard `:root ` prefix.
-            selector = selectors[i].slice(6);
+            selector = selectors[i];
             if ( filterMap.has(rootNode) === false && rootNode[matchesFnName](selector) ) {
                 filterMap.set(rootNode, selector);
-                hideNode(node);
             }
             nodes = rootNode.querySelectorAll(selector);
             j = nodes.length;
@@ -727,24 +710,48 @@ var cosmeticFilterMapper = (function() {
                 node = nodes[j];
                 if ( filterMap.has(node) === false ) {
                     filterMap.set(node, selector);
-                    hideNode(node);
                 }
             }
+        }
+    
+        // CSS-based selectors: complex one (must query from doc root).
+        selectors = vAPI.domFilterer.job3._0;
+        i = selectors.length;
+        while ( i-- ) {
+            selector = selectors[i];
+            nodes = document.querySelectorAll(selector);
+            j = nodes.length;
+            while ( j-- ) {
+                node = nodes[j];
+                if ( filterMap.has(node) === false ) {
+                    filterMap.set(node, selector);
+                }
+            }
+        }
+
+        // Non-CSS selectors.
+        var runJobCallback = function(node, job) {
+            if ( filterMap.has(node) === false ) {
+                filterMap.set(node, job.raw);
+            }
+        };
+        for ( i = 4; i < vAPI.domFilterer.jobQueue.length; i++ ) {
+            vAPI.domFilterer.runJob(vAPI.domFilterer.jobQueue[i], runJobCallback);
         }
     };
 
     var incremental = function(rootNode) {
-        var styleTags = vAPI.styles || [];
+        var styleTags = vAPI.domFilterer.styleTags || [];
         var styleTag;
         var i = styleTags.length;
         while ( i-- ) {
             styleTag = styleTags[i];
-            nodesFromStyleTag(styleTag, rootNode);
             if ( styleTag.sheet !== null ) {
                 styleTag.sheet.disabled = true;
                 styleTag[vAPI.sessionId] = true;
             }
         }
+        nodesFromStyleTag(rootNode);
     };
 
     var reset = function() {
@@ -753,7 +760,7 @@ var cosmeticFilterMapper = (function() {
     };
 
     var shutdown = function() {
-        var styleTags = vAPI.styles || [];
+        var styleTags = vAPI.domFilterer.styleTags || [];
         var styleTag;
         var i = styleTags.length;
         while ( i-- ) {
@@ -778,12 +785,51 @@ var elementsFromSelector = function(selector, context) {
     if ( !context ) {
         context = document;
     }
-    var out = [];
+    var out;
+    if ( selector.indexOf(':') !== -1 ) {
+        out = elementsFromSpecialSelector(selector);
+        if ( out !== undefined ) {
+            return out;
+        }
+    }
+    // plain CSS selector
     try {
         out = context.querySelectorAll(selector);
     } catch (ex) {
     }
-    return out;
+    return out || [];
+};
+
+var elementsFromSpecialSelector = function(selector) {
+    var out = [], i;
+    var matches = /^(.+?):has\((.+?)\)$/.exec(selector);
+    if ( matches !== null ) {
+        var nodes = document.querySelectorAll(matches[1]);
+        i = nodes.length;
+        while ( i-- ) {
+            var node = nodes[i];
+            if ( node.querySelector(matches[2]) !== null ) {
+                out.push(node);
+            }
+        }
+        return out;
+    }
+
+    matches = /^:xpath\((.+?)\)$/.exec(selector);
+    if ( matches !== null ) {
+        var xpr = document.evaluate(
+            matches[1],
+            document,
+            null,
+            XPathResult.UNORDERED_NODE_SNAPSHOT_TYPE,
+            null
+        );
+        i = xpr.snapshotLength;
+        while ( i-- ) {
+            out.push(xpr.snapshotItem(i));
+        }
+        return out;
+    }
 };
 
 /******************************************************************************/
@@ -918,9 +964,7 @@ var shutdown = function() {
     cosmeticFilterMapper.shutdown();
     resetToggledNodes();
     domLayout.shutdown();
-    localMessager.removeAllListeners();
-    localMessager.close();
-    localMessager = null;
+    vAPI.messaging.removeAllChannelListeners('domInspector');
     window.removeEventListener('scroll', onScrolled, true);
     document.documentElement.removeChild(pickerRoot);
     pickerRoot = svgRoot = null;
@@ -982,39 +1026,18 @@ var toggleNodes = function(nodes, originalState, targetState) {
 /******************************************************************************/
 
 var showNode = function(node, v1, v2) {
-    var shadow = node.shadowRoot;
-    if ( shadow === undefined ) {
-        if ( !v1 ) {
-            node.style.removeProperty('display');
-        } else {
-            node.style.setProperty('display', v1, v2);
-        }
-    } else if ( shadow !== null && shadow.className === sessionId && shadow.firstElementChild === null ) {
-        shadow.appendChild(document.createElement('content'));
+    vAPI.domFilterer.showNode(node);
+    if ( !v1 ) {
+        node.style.removeProperty('display');
+    } else {
+        node.style.setProperty('display', v1, v2);
     }
 };
 
 /******************************************************************************/
 
 var hideNode = function(node) {
-    var shadow = node.shadowRoot;
-    if ( shadow === undefined ) {
-        node.style.setProperty('display', 'none', 'important');
-        return;
-    }
-    if ( shadow !== null && shadow.className === sessionId ) {
-        if ( shadow.firstElementChild !== null ) {
-            shadow.removeChild(shadow.firstElementChild);
-        }
-        return;
-    }
-    // not all nodes can be shadowed
-    try {
-        shadow = node.createShadowRoot();
-    } catch (ex) {
-        return;
-    }
-    shadow.className = sessionId;
+    vAPI.domFilterer.unshowNode(node);
 };
 
 /******************************************************************************/
@@ -1069,6 +1092,12 @@ var onMessage = function(request) {
         toggleNodes(selectNodes(request.unhide, ''), false, true);
         highlightedElementLists = [ [], [], [] ];
         highlightElements();
+        break;
+
+    case 'toggleFilter':
+        highlightedElementLists[0] = selectNodes(request.filter, request.nid);
+        toggleNodes(highlightedElementLists[0], request.original, request.target);
+        highlightElements(true);
         break;
 
     case 'toggleNodes':
@@ -1165,7 +1194,7 @@ pickerRoot.onload = function() {
     highlightElements();
     cosmeticFilterMapper.reset();
 
-    localMessager.addListener(onMessage);
+    vAPI.messaging.addChannelListener('domInspector', onMessage);
 };
 
 document.documentElement.appendChild(pickerRoot);

@@ -1,7 +1,7 @@
 /*******************************************************************************
 
-    µBlock - a browser extension to block requests.
-    Copyright (C) 2014 Raymond Hill
+    uBlock Origin - a browser extension to block requests.
+    Copyright (C) 2014-2016 Raymond Hill
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
     Home: https://github.com/gorhill/uBlock
 */
 
-/* global vAPI, uDom */
+/* global uDom */
 
 /******************************************************************************/
 
@@ -31,7 +31,8 @@
 
 var userListName = vAPI.i18n('1pPageName');
 var listDetails = {};
-var cosmeticSwitch = true;
+var parseCosmeticFilters = true;
+var ignoreGenericCosmeticFilters = false;
 var externalLists = '';
 var cacheWasPurged = false;
 var needUpdate = false;
@@ -48,7 +49,7 @@ var onMessage = function(msg) {
     case 'forceUpdateAssetsProgress':
         renderBusyOverlay(true, msg.progress);
         if ( msg.done ) {
-            messager.send({ what: 'reloadAllFilters' });
+            messaging.send('dashboard', { what: 'reloadAllFilters' });
         }
         break;
 
@@ -57,7 +58,8 @@ var onMessage = function(msg) {
     }
 };
 
-var messager = vAPI.messaging.channel('3p-filters.js', onMessage);
+var messaging = vAPI.messaging;
+messaging.addChannelListener('dashboard', onMessage);
 
 /******************************************************************************/
 
@@ -215,7 +217,8 @@ var renderFilterLists = function() {
     var onListsReceived = function(details) {
         // Before all, set context vars
         listDetails = details;
-        cosmeticSwitch = details.cosmetic;
+        parseCosmeticFilters = details.parseCosmeticFilters;
+        ignoreGenericCosmeticFilters = details.ignoreGenericCosmeticFilters;
         needUpdate = false;
         hasCachedContent = false;
 
@@ -256,13 +259,14 @@ var renderFilterLists = function() {
                 .replace('{{cosmeticFilterCount}}', renderNumber(details.cosmeticFilterCount))
         );
         uDom('#autoUpdate').prop('checked', listDetails.autoUpdate === true);
-        uDom('#parseCosmeticFilters').prop('checked', listDetails.cosmetic === true);
+        uDom('#parseCosmeticFilters').prop('checked', listDetails.parseCosmeticFilters === true);
+        uDom('#ignoreGenericCosmeticFilters').prop('checked', listDetails.ignoreGenericCosmeticFilters === true);
 
         renderWidgets();
         renderBusyOverlay(details.manualUpdate, details.manualUpdateProgress);
     };
 
-    messager.send({ what: 'getLists' }, onListsReceived);
+    messaging.send('dashboard', { what: 'getLists' }, onListsReceived);
 };
 
 /******************************************************************************/
@@ -301,7 +305,10 @@ var renderWidgets = function() {
 // Return whether selection of lists changed.
 
 var listsSelectionChanged = function() {
-    if ( listDetails.cosmetic !== cosmeticSwitch ) {
+    if (
+        listDetails.parseCosmeticFilters !== parseCosmeticFilters ||
+        listDetails.parseCosmeticFilters && listDetails.ignoreGenericCosmeticFilters !== ignoreGenericCosmeticFilters
+    ) {
         return true;
     }
 
@@ -372,13 +379,16 @@ var onPurgeClicked = function() {
         return;
     }
 
-    messager.send({ what: 'purgeCache', path: href });
+    messaging.send('dashboard', { what: 'purgeCache', path: href });
     button.remove();
 
     // If the cached version is purged, the installed version must be assumed
     // to be obsolete.
+    // https://github.com/gorhill/uBlock/issues/1733
+    // An external filter list must not be marked as obsolete, they will always
+    // be fetched anyways if there is no cached copy.
     var entry = listDetails.current && listDetails.current[href];
-    if ( entry && entry.off !== true ) {
+    if ( entry && entry.off !== true && /^[a-z]+:\/\//.test(href) === false ) {
         if ( typeof entry.homeURL !== 'string' || entry.homeURL === '' ) {
             li.descendants('span.status.new').css('display', '');
         } else {
@@ -397,10 +407,15 @@ var onPurgeClicked = function() {
 
 var selectFilterLists = function(callback) {
     // Cosmetic filtering switch
-    messager.send({
+    messaging.send('dashboard', {
         what: 'userSettings',
         name: 'parseAllABPHideFilters',
-        value: listDetails.cosmetic
+        value: listDetails.parseCosmeticFilters
+    });
+    messaging.send('dashboard', {
+        what: 'userSettings',
+        name: 'ignoreGenericCosmeticFilters',
+        value: listDetails.ignoreGenericCosmeticFilters
     });
 
     // Filter lists
@@ -415,10 +430,14 @@ var selectFilterLists = function(callback) {
         });
     }
 
-    messager.send({
-        what: 'selectFilterLists',
-        switches: switches
-    }, callback);
+    messaging.send(
+        'dashboard',
+        {
+            what: 'selectFilterLists',
+            switches: switches
+        },
+        callback
+    );
 };
 
 /******************************************************************************/
@@ -429,7 +448,7 @@ var buttonApplyHandler = function() {
     renderBusyOverlay(true);
 
     var onSelectionDone = function() {
-        messager.send({ what: 'reloadAllFilters' });
+        messaging.send('dashboard', { what: 'reloadAllFilters' });
     };
 
     selectFilterLists(onSelectionDone);
@@ -446,7 +465,7 @@ var buttonUpdateHandler = function() {
         renderBusyOverlay(true);
 
         var onSelectionDone = function() {
-            messager.send({ what: 'forceUpdateAssets' });
+            messaging.send('dashboard', { what: 'forceUpdateAssets' });
         };
 
         selectFilterLists(onSelectionDone);
@@ -467,23 +486,27 @@ var buttonPurgeAllHandler = function() {
         renderFilterLists();
     };
 
-    messager.send({ what: 'purgeAllCaches' }, onCompleted);
+    messaging.send('dashboard', { what: 'purgeAllCaches' }, onCompleted);
 };
 
 /******************************************************************************/
 
 var autoUpdateCheckboxChanged = function() {
-    messager.send({
-        what: 'userSettings',
-        name: 'autoUpdate',
-        value: this.checked
-    });
+    messaging.send(
+        'dashboard',
+        {
+            what: 'userSettings',
+            name: 'autoUpdate',
+            value: this.checked
+        }
+    );
 };
 
 /******************************************************************************/
 
 var cosmeticSwitchChanged = function() {
-    listDetails.cosmetic = this.checked;
+    listDetails.parseCosmeticFilters = uDom.nodeFromId('parseCosmeticFilters').checked;
+    listDetails.ignoreGenericCosmeticFilters = uDom.nodeFromId('ignoreGenericCosmeticFilters').checked;
     renderWidgets();
 };
 
@@ -494,25 +517,32 @@ var renderExternalLists = function() {
         uDom('#externalLists').val(details);
         externalLists = details;
     };
-    messager.send({ what: 'userSettings', name: 'externalLists' }, onReceived);
+    messaging.send(
+        'dashboard',
+        { what: 'userSettings', name: 'externalLists' },
+        onReceived
+    );
 };
 
 /******************************************************************************/
 
 var externalListsChangeHandler = function() {
     uDom.nodeFromId('externalListsApply').disabled =
-        uDom.nodeFromId('externalLists').value.trim() === externalLists;
+        uDom.nodeFromId('externalLists').value.trim() === externalLists.trim();
 };
 
 /******************************************************************************/
 
 var externalListsApplyHandler = function() {
     externalLists = uDom.nodeFromId('externalLists').value;
-    messager.send({
-        what: 'userSettings',
-        name: 'externalLists',
-        value: externalLists
-    });
+    messaging.send(
+        'dashboard',
+        {
+            what: 'userSettings',
+            name: 'externalLists',
+            value: externalLists
+        }
+    );
     renderFilterLists();
     uDom('#externalListsApply').prop('disabled', true);
 };
@@ -535,6 +565,7 @@ var groupEntryClickHandler = function() {
 var getCloudData = function() {
     var bin = {
         parseCosmeticFilters: uDom.nodeFromId('parseCosmeticFilters').checked,
+        ignoreGenericCosmeticFilters: uDom.nodeFromId('ignoreGenericCosmeticFilters').checked,
         selectedLists: [],
         externalLists: externalLists
     };
@@ -551,27 +582,38 @@ var getCloudData = function() {
     return bin;
 };
 
-var setCloudData = function(data) {
+var setCloudData = function(data, append) {
     if ( typeof data !== 'object' || data === null ) {
         return;
     }
 
-    var checked = data.parseCosmeticFilters === true;
-    uDom.nodeFromId('parseCosmeticFilters').checked = checked;
-    listDetails.cosmetic = checked;
+    var elem, checked;
 
-    var lis = uDom('#lists .listEntry'), li, input, listKey;
+    elem = uDom.nodeFromId('parseCosmeticFilters');
+    checked = data.parseCosmeticFilters === true || append && elem.checked;
+    elem.checked = listDetails.parseCosmeticFilters = checked;
+
+    elem = uDom.nodeFromId('ignoreGenericCosmeticFilters');
+    checked = data.ignoreGenericCosmeticFilters === true || append && elem.checked;
+    elem.checked = listDetails.ignoreGenericCosmeticFilters = checked;
+
+    var lis = uDom('#lists .listEntry'), li, listKey;
     var i = lis.length;
     while ( i-- ) {
         li = lis.at(i);
-        input = li.descendants('input');
+        elem = li.descendants('input');
         listKey = li.descendants('a').attr('data-listkey');
-        checked = data.selectedLists.indexOf(listKey) !== -1;
-        input.prop('checked', checked);
+        checked = data.selectedLists.indexOf(listKey) !== -1 ||
+                  append && elem.prop('checked');
+        elem.prop('checked', checked);
         listDetails.available[listKey].off = !checked;
     }
 
-    uDom.nodeFromId('externalLists').value = data.externalLists || '';
+    elem = uDom.nodeFromId('externalLists');
+    if ( !append ) {
+        elem.value = '';
+    }
+    elem.value += data.externalLists || '';
 
     renderWidgets();
     externalListsChangeHandler();
@@ -584,6 +626,7 @@ self.cloud.onPull = setCloudData;
 
 uDom('#autoUpdate').on('change', autoUpdateCheckboxChanged);
 uDom('#parseCosmeticFilters').on('change', cosmeticSwitchChanged);
+uDom('#ignoreGenericCosmeticFilters').on('change', cosmeticSwitchChanged);
 uDom('#buttonApply').on('click', buttonApplyHandler);
 uDom('#buttonUpdate').on('click', buttonUpdateHandler);
 uDom('#buttonPurgeAll').on('click', buttonPurgeAllHandler);

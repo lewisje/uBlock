@@ -19,6 +19,12 @@
 		"group": "regions",
 		"supportURL": "http://noads.it/"
 	},
+	"https://adguard.com/en/filter-rules.html?id=1": {
+		"off": true,
+		"title": "RUS: Adguard Russian Filter",
+		"group": "regions",
+		"supportURL": "http://forum.adguard.com/forumdisplay.php?69-%D0%A4%D0%B8%D0%BB%D1%8C%D1%82%D1%80%D1%8B-Adguard"
+	},
 	"https://easylist-downloads.adblockplus.org/advblock.txt": {
 		"off": true,
 		"title": "RUS: RU AdList (Дополнительная региональная подписка)",
@@ -35,7 +41,7 @@
 	"easylist-downloads.adblockplus.org/easylist.txt": {
 		"title": "EasyList",
 		"group": "ads",
-		"homeURL": "https://easylist-downloads.adblockplus.org/easylist.txt",
+		"homeURL": "https://easylist.to/easylist/easylist.txt",
 		"supportURL": "https://forums.lanik.us/"
 	},
 	"https://easylist-downloads.adblockplus.org/easylist_noelemhide.txt": {
@@ -50,6 +56,18 @@
 		"group": "regions",
 		"lang": "zh",
 		"supportURL": "http://abpchina.org/forum/forum.php"
+	},
+	"https://raw.githubusercontent.com/cjx82630/cjxlist/master/cjxlist.txt": {
+		"off": true,
+		"title": "CHN: CJX's EasyList Lite (main focus on Chinese sites)",
+		"group": "regions",
+		"supportURL": "https://github.com/cjx82630/cjxlist"
+	},
+	"https://raw.githubusercontent.com/cjx82630/cjxlist/master/cjx-annoyance.txt": {
+		"off": true,
+		"title": "CHN: CJX's Annoyance List",
+		"group": "regions",
+		"supportURL": "https://github.com/cjx82630/cjxlist"
 	},
 	"https://easylist-downloads.adblockplus.org/easylistdutch.txt": {
 		"off": true,
@@ -75,7 +93,7 @@
 	"easylist-downloads.adblockplus.org/easyprivacy.txt": {
 		"title": "EasyPrivacy",
 		"group": "privacy",
-		"homeURL": "https://easylist-downloads.adblockplus.org/easyprivacy.txt",
+		"homeURL": "https://easylist.to/easylist/easyprivacy.txt",
 		"supportURL": "https://forums.lanik.us/"
 	},
 	"https://easylist-downloads.adblockplus.org/fanboy-annoyance.txt": {
@@ -193,12 +211,6 @@
 		"lang": "ar",
 		"supportURL": "https://forums.lanik.us/viewforum.php?f=98"
 	},
-	"https://liste-ar-adblock.googlecode.com/hg/Liste_AR.txt": {
-		"off": true,
-		"title": "ara: Liste AR (obsolete, will be removed soon)",
-		"group": "regions",
-		"supportURL": "https://code.google.com/p/liste-ar-adblock/"
-	},
 	"http://margevicius.lt/easylistlithuania.txt": {
 		"off": true,
 		"title": "LTU: Adblock Plus Lithuania",
@@ -215,27 +227,27 @@
 	"mirror1.malwaredomains.com/files/justdomains": {
 		"title": "Malware domains",
 		"group": "malware",
-		"homeURL": "http://malwaredomains.lehigh.edu/files/justdomains",
+		"homeURL": "https://mirror.cedia.org.ec/malwaredomains/justdomains",
 		"supportURL": "http://www.malwaredomains.com/"
 	},
 	"pgl.yoyo.org/as/serverlist": {
 		"title": "Peter Lowe’s Ad server list",
 		"group": "ads",
-		"homeURL": "http://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=1&mimetype=plaintext",
-		"supportURL": "http://pgl.yoyo.org/adservers/"
+		"homeURL": "https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&showintro=1&mimetype=plaintext",
+		"supportURL": "https://pgl.yoyo.org/adservers/"
 	},
 	"https://raw.githubusercontent.com/AdBlockPlusIsrael/EasyListHebrew/master/EasyListHebrew.txt": {
+		"off": true,
+		"title": "ISR: EasyList Hebrew (obsolete, will be removed soon)",
+		"group": "regions",
+		"supportURL": "https://github.com/AdBlockPlusIsrael/EasyListHebrew"
+	},
+	"https://raw.githubusercontent.com/easylist/EasyListHebrew/master/EasyListHebrew.txt": {
 		"off": true,
 		"title": "ISR: EasyList Hebrew",
 		"group": "regions",
 		"lang": "he",
-		"supportURL": "https://github.com/AdBlockPlusIsrael/EasyListHebrew"
-	},
-	"https://raw.githubusercontent.com/cjx82630/cjxlist/master/cjxlist.txt": {
-		"off": true,
-		"title": "CHN: China: cjxlist (main focus on Chinese sites)",
-		"group": "regions",
-		"supportURL": "https://github.com/cjx82630/cjxlist"
+		"supportURL": "https://github.com/easylist/EasyListHebrew"
 	},
 	"https://raw.githubusercontent.com/reek/anti-adblock-killer/master/anti-adblock-killer-filters.txt": {
 		"off": true,
@@ -264,7 +276,7 @@
 		"group": "multipurpose",
 		"supportURL": "http://someonewhocares.org/hosts/"
 	},
-	"https://spam404bl.com/spam404scamlist.txt": {
+	"https://raw.githubusercontent.com/Dawsey21/Lists/master/adblock-list.txt": {
 		"off": true,
 		"title": "Spam404",
 		"group": "malware",
@@ -301,6 +313,13 @@
 		"group": "regions",
 		"supportURL": "https://forums.lanik.us/"
 	},
+	"https://easylist-downloads.adblockplus.org/easylistspanish.txt": {
+		"off": true,
+		"title": "spa: EasyList Spanish",
+		"group": "regions",
+		"lang": "es",
+		"supportURL": "https://forums.lanik.us/viewforum.php?f=103"
+	},
 	"https://www.fanboy.co.nz/fanboy-swedish.txt": {
 		"off": true,
 		"title": "SWE: Fanboy's Swedish",
@@ -331,7 +350,7 @@
 	"www.malwaredomainlist.com/hostslist/hosts.txt": {
 		"title": "Malware Domain List",
 		"group": "malware",
-		"homeURL": "http://www.malwaredomainlist.com/hostslist/hosts.txt"
+		"homeURL": "https://www.malwaredomainlist.com/hostslist/hosts.txt"
 	},
 	"https://www.void.gr/kargig/void-gr-filters.txt": {
 		"off": true,

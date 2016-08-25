@@ -68,7 +68,7 @@
     "description":"English: Click to open the dashboard"
   },
   "popupTipPicker":{
-    "message":"Перейти у режим вибору элементів",
+    "message":"Перейти у режим вибору елементів",
     "description":"English: Enter element picker mode"
   },
   "popupTipLog":{
@@ -77,19 +77,19 @@
   },
   "popupTipNoPopups":{
     "message":"Увімкнути блокування всіх виринаючих вікон цього сайту",
-    "description":"English: Toggle the blocking of all popups for this site"
+    "description":"Tooltip for the no-popups per-site switch"
   },
-  "popupTipNoStrictBlocking":{
-    "message":"Переключити повне блокування цього сайту",
-    "description":"English: Toggle strict blocking for this site"
+  "popupTipNoLargeMedia":{
+    "message":"Перемкнути блокування великих медіа елементів на цьому сайті",
+    "description":"Tooltip for the no-large-media per-site switch"
   },
   "popupTipNoCosmeticFiltering":{
     "message":"Переключити косметичний фільтр для цього сайту",
-    "description":"English: Toggle cosmetic filtering for this site"
+    "description":"Tooltip for the no-cosmetic-filtering per-site switch"
   },
   "popupTipNoRemoteFonts":{
     "message":"Перемкнути блокування віддалених шрифтів для цього сайту",
-    "description":"English: Toggle the blocking of remote fonts for this site"
+    "description":"Tooltip for the no-remote-fonts per-site switch"
   },
   "popupTipGlobalRules":{
     "message":"Глобальні правила: цей стовпчик для правил, що застосовуються для всіх сайтів.",
@@ -159,6 +159,10 @@
     "message":"Вийти",
     "description":"English: Quit"
   },
+  "pickerPreview":{
+    "message":"Попередній перегляд",
+    "description":"Element picker preview mode: will cause the elements matching the current filter to be removed from the page"
+  },
   "pickerNetFilters":{
     "message":"Мережні фільтри",
     "description":"English: Net filters"
@@ -215,9 +219,25 @@
     "message":"Унеможливити витік локальної IP-адреси через WebRTC",
     "description":"English: "
   },
-  "settingsExperimentalPrompt":{
-    "message":"Ввімкнути експериментальні функції (<a href='https:\/\/github.com\/gorhill\/uBlock\/wiki\/Experimental-features'>Детальніше тут<\/a>)",
-    "description":"English: Enable experimental features"
+  "settingPerSiteSwitchGroup":{
+    "message":"Стандартні налаштування",
+    "description":""
+  },
+  "settingPerSiteSwitchGroupSynopsis":{
+    "message":"Ці стандартні налаштування можуть бути перевизначені для кожного сайту окремо",
+    "description":""
+  },
+  "settingsNoCosmeticFilteringPrompt":{
+    "message":"Вимкнути косметичні фільтри",
+    "description":""
+  },
+  "settingsNoLargeMediaPrompt":{
+    "message":"Блокувати медіа елементи розміром від {{input:number}} кБ",
+    "description":""
+  },
+  "settingsNoRemoteFontsPrompt":{
+    "message":"Блокувати сторонні шрифти",
+    "description":""
   },
   "settingsStorageUsed":{
     "message":"Використано: {{value}} байт",
@@ -233,23 +253,23 @@
   },
   "3pListsOfBlockedHostsPrompt":{
     "message":"{{netFilterCount}} мережевих фільтрів ＋ {{cosmeticFilterCount}} косметичних фільтрів з:",
-    "description":"English: {{netFilterCount}} network filters ＋ {{cosmeticFilterCount}} cosmetic filters from:"
+    "description":"Appears at the top of the _3rd-party filters_ pane"
   },
   "3pListsOfBlockedHostsPerListStats":{
     "message":"використовується {{used}} з {{total}}",
-    "description":"English: {{used}} used out of {{total}}"
+    "description":"Appears aside each filter list in the _3rd-party filters_ pane"
   },
   "3pAutoUpdatePrompt1":{
     "message":"Автоматично оновити списки фільтрів.",
-    "description":"English: Auto-update filter lists."
+    "description":"A checkbox in the _3rd-party filters_ pane"
   },
   "3pUpdateNow":{
     "message":"Оновити зараз",
-    "description":"English: Update now"
+    "description":"A button in the in the _3rd-party filters_ pane"
   },
   "3pPurgeAll":{
     "message":"Очистити всі кеші",
-    "description":"English: Purge all caches"
+    "description":"A button in the in the _3rd-party filters_ pane"
   },
   "3pParseAllABPHideFiltersPrompt1":{
     "message":"Розбір та застосування фільтрів приховування елементів Adblock+.",
@@ -257,7 +277,15 @@
   },
   "3pParseAllABPHideFiltersInfo":{
     "message":"<p>Ця опція вмикає аналіз та застосування <a href=\"https:\/\/adblockplus.org\/en\/faq_internal#elemhide\">Adblock Plus-сумісних фільтрів &ldquo;приховання елементв&rdquo; <\/a>. По суті це косметичні фільтри – приховують елементи сторінки, які візуально дратують і не можуть бути блоковані механізмом фільтрації  мережевих запитів.<\/p><p>Увімкнення цієї функції збільшує споживання пам’яті <i>µBlock<\/i>'ом.<\/p>",
-    "description":"This option enables the parsing and enforcing of Adblock Plus-compatible 'element hiding' filters. These filters are essentially cosmetic, they serve to hide elements in a web page which are deemed to be a visual nuisance, and which can't be blocked by the net request-based filtering engine.\n\nEnabling this feature increases uBlock Origin's memory footprint."
+    "description":"Describes the purpose of the 'Parse and enforce cosmetic filters' feature."
+  },
+  "3pIgnoreGenericCosmeticFilters":{
+    "message":"Ігнорувати загальні косметичні фільтри.",
+    "description":"This will cause uBO to ignore all generic cosmetic filters."
+  },
+  "3pIgnoreGenericCosmeticFiltersInfo":{
+    "message":"<p>Загальні косметичні фільтри — це косметичні фільтри, які повинні застосовуватися до всіх веб-сторінок.<p>Хоча uBlock і звертається з ними ефективно, вони все одно можуть вимагати значну кількість ресурсів на деяких, особливо великих, сторінках.<p>Увімкнення цього параметра знизить споживання ресурсів таких сторінок від застосування загальних косметичних фільтрів, а також знизить споживання пам'яті самого uBlock.<p>Рекомендується увімкнути цей параметр на слабких пристроях.",
+    "description":"Describes the purpose of the 'Ignore generic cosmetic filters' feature."
   },
   "3pListsOfBlockedHostsHeader":{
     "message":"Перелік заблокованих хостів",
@@ -627,6 +655,10 @@
     "message":"Імпортувати із хмарного сховища",
     "description":"tooltip"
   },
+  "cloudPullAndMerge":{
+    "message":"Імпортувати з хмарного сховища та обєднати з поточними налаштуваннями",
+    "description":"tooltip"
+  },
   "cloudNoData":{
     "message":"...\n...",
     "description":""
@@ -646,6 +678,10 @@
   "genericBytes":{
     "message":"байтів",
     "description":""
+  },
+  "contextMenuTemporarilyAllowLargeMediaElements":{
+    "message":"Тимчасово дозволити великі медіа елементи",
+    "description":"A context menu entry, present when large media elements have been blocked on the current site"
   },
   "dummy":{
     "message":"Цей запис має бути останнім",

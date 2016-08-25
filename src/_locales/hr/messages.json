@@ -77,19 +77,19 @@
   },
   "popupTipNoPopups":{
     "message":"Uključi\/isključi skočne prozore na ovoj stranici",
-    "description":"English: Toggle the blocking of all popups for this site"
+    "description":"Tooltip for the no-popups per-site switch"
   },
-  "popupTipNoStrictBlocking":{
-    "message":"Uključi\/isključi strogo blokiranje na ovoj stranici",
-    "description":"English: Toggle strict blocking for this site"
+  "popupTipNoLargeMedia":{
+    "message":"Namjestite blokiranje velikih medijskih elemenata za ovaj sajt",
+    "description":"Tooltip for the no-large-media per-site switch"
   },
   "popupTipNoCosmeticFiltering":{
-    "message":"Uključi\/isključi kozmetičko filtriranje na ovoj stranici",
-    "description":"English: Toggle cosmetic filtering for this site"
+    "message":"Uključi\/isključi estestko filtriranje na ovoj stranici",
+    "description":"Tooltip for the no-cosmetic-filtering per-site switch"
   },
   "popupTipNoRemoteFonts":{
     "message":"Uključi\/isključi blokiranje udaljenih fontova za ovu stranicu",
-    "description":"English: Toggle the blocking of remote fonts for this site"
+    "description":"Tooltip for the no-remote-fonts per-site switch"
   },
   "popupTipGlobalRules":{
     "message":"Globalna pravila: ovaj stupac je za pravila koja vrijede za sve stranice.",
@@ -100,11 +100,11 @@
     "description":"Tooltip when hovering the top-most cell of the local-rules column."
   },
   "popupTipSaveRules":{
-    "message":"Click to make your changes permanent.",
+    "message":"Kliknite kako biste spremili promjene.",
     "description":"Tooltip when hovering over the padlock in the dynamic filtering pane."
   },
   "popupTipRevertRules":{
-    "message":"Click to revert your changes.",
+    "message":"Kliknite kako bi vratili promjene.",
     "description":"Tooltip when hovering over the eraser in the dynamic filtering pane."
   },
   "popupAnyRulePrompt":{
@@ -158,6 +158,10 @@
   "pickerQuit":{
     "message":"Izlaz",
     "description":"English: Quit"
+  },
+  "pickerPreview":{
+    "message":"Pregled",
+    "description":"Element picker preview mode: will cause the elements matching the current filter to be removed from the page"
   },
   "pickerNetFilters":{
     "message":"Mrežni filteri",
@@ -215,9 +219,25 @@
     "message":"Spriječi WebRTC da propušta lokalnu IP adresu",
     "description":"English: "
   },
-  "settingsExperimentalPrompt":{
-    "message":"Omogućiti eksperimentalne mogućnosti  (<a href='https:\/\/github.com\/gorhill\/uBlock\/wiki\/Experimental-features'>O mogućnostima<\/a>)",
-    "description":"English: Enable experimental features"
+  "settingPerSiteSwitchGroup":{
+    "message":"Zadano ponašanje",
+    "description":""
+  },
+  "settingPerSiteSwitchGroupSynopsis":{
+    "message":"Ova zadana ponašanja mogu biti poništena na bazi web-stranice",
+    "description":""
+  },
+  "settingsNoCosmeticFilteringPrompt":{
+    "message":"Onemogući estesko filtriranje",
+    "description":""
+  },
+  "settingsNoLargeMediaPrompt":{
+    "message":"Blokiraj medijske elemente veće od {{input:number}} kB",
+    "description":""
+  },
+  "settingsNoRemoteFontsPrompt":{
+    "message":"Blokiraj udaljene fontove",
+    "description":""
   },
   "settingsStorageUsed":{
     "message":"Korišteno prostora: {{value}} bajtova",
@@ -233,23 +253,23 @@
   },
   "3pListsOfBlockedHostsPrompt":{
     "message":"{{netFilterCount}} mrežni\/ih filter\/a ＋ {{cosmeticFilterCount}} estetski\/ih filter\/a iz:",
-    "description":"English: {{netFilterCount}} network filters ＋ {{cosmeticFilterCount}} cosmetic filters from:"
+    "description":"Appears at the top of the _3rd-party filters_ pane"
   },
   "3pListsOfBlockedHostsPerListStats":{
     "message":"{{used}} korišteno od {{total}}",
-    "description":"English: {{used}} used out of {{total}}"
+    "description":"Appears aside each filter list in the _3rd-party filters_ pane"
   },
   "3pAutoUpdatePrompt1":{
     "message":"Automatsko ažuriranje popisa filtera.",
-    "description":"English: Auto-update filter lists."
+    "description":"A checkbox in the _3rd-party filters_ pane"
   },
   "3pUpdateNow":{
     "message":"Ažuriraj odmah",
-    "description":"English: Update now"
+    "description":"A button in the in the _3rd-party filters_ pane"
   },
   "3pPurgeAll":{
     "message":"Očistiti sve cache-ove",
-    "description":"English: Purge all caches"
+    "description":"A button in the in the _3rd-party filters_ pane"
   },
   "3pParseAllABPHideFiltersPrompt1":{
     "message":"Raščlaniti i primijeniti estetske filtre.",
@@ -257,7 +277,15 @@
   },
   "3pParseAllABPHideFiltersInfo":{
     "message":"<p>Ova opcija omogućava raščlambu i provođenje <a href=\"https:\/\/adblockplus.org\/en\/faq_internal#elemhide\">Adblock Plus-kompatibilnih filtera sa &ldquo;elementima za skrivanje&rdquo; <\/a>. Ovi filteri su uglavnom estetski, oni služe za skrivanje elemenata na web-stranici koja se smatra da je vizualna smetnja, a koja ne može biti blokirana od strane mrežnih zahtjeva temeljenih na filtriranju.<\/p><p>Omogućavanje ove značajke povećava <i>uBlock₀ <\/i>memorijski otisak.<\/p>",
-    "description":"This option enables the parsing and enforcing of Adblock Plus-compatible 'element hiding' filters. These filters are essentially cosmetic, they serve to hide elements in a web page which are deemed to be a visual nuisance, and which can't be blocked by the net request-based filtering engine.\n\nEnabling this feature increases uBlock Origin's memory footprint."
+    "description":"Describes the purpose of the 'Parse and enforce cosmetic filters' feature."
+  },
+  "3pIgnoreGenericCosmeticFilters":{
+    "message":"Ignoriraj opće estetsko filtriranje.",
+    "description":"This will cause uBO to ignore all generic cosmetic filters."
+  },
+  "3pIgnoreGenericCosmeticFiltersInfo":{
+    "message":"<p>Generic cosmetic filters are those cosmetic filters which are meant to apply on all web sites.<p>Though handled efficiently by uBlock₀, generic cosmetic filters may still contribute measurable memory and CPU overhead on some web pages, especially for large and long-lived ones.<p>Enabling this option will eliminate the memory and CPU overhead added to web pages as a result of handling generic cosmetic filters, and also lower the memory footprint of uBlock₀ itself.<p>It is recommended to enable this option on less powerful devices.",
+    "description":"Describes the purpose of the 'Ignore generic cosmetic filters' feature."
   },
   "3pListsOfBlockedHostsHeader":{
     "message":"Popis blokiranih hosts",
@@ -627,6 +655,10 @@
     "message":"Uvezi iz pohrane u oblaku",
     "description":"tooltip"
   },
+  "cloudPullAndMerge":{
+    "message":"Uvezite iz spremišta u oblaku i spojite sa trenutnim postavkama",
+    "description":"tooltip"
+  },
   "cloudNoData":{
     "message":"...\n...",
     "description":""
@@ -646,6 +678,10 @@
   "genericBytes":{
     "message":"bajtovi",
     "description":""
+  },
+  "contextMenuTemporarilyAllowLargeMediaElements":{
+    "message":"Privremeno dopusti velike medijske elemente",
+    "description":"A context menu entry, present when large media elements have been blocked on the current site"
   },
   "dummy":{
     "message":"Ova stavka mora biti posljednja",

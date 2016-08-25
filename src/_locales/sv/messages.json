@@ -32,7 +32,7 @@
     "description":"appears as tab name in dashboard"
   },
   "statsPageName":{
-    "message":"uBlock₀ — Logg för nätverksbegäranden",
+    "message":"uBlock₀ — Logg för nätverksbegäran",
     "description":"Title for the logger window"
   },
   "aboutPageName":{
@@ -72,31 +72,31 @@
     "description":"English: Enter element picker mode"
   },
   "popupTipLog":{
-    "message":"Gå till logg",
+    "message":"Öppna loggaren",
     "description":"Tooltip used for the logger icon in the panel"
   },
   "popupTipNoPopups":{
     "message":"Växla blockering av popup-fönster för denna sida",
-    "description":"English: Toggle the blocking of all popups for this site"
+    "description":"Tooltip for the no-popups per-site switch"
   },
-  "popupTipNoStrictBlocking":{
-    "message":"Växla strikt blockering för den här sidan",
-    "description":"English: Toggle strict blocking for this site"
+  "popupTipNoLargeMedia":{
+    "message":"Ändra blockering av stora medieelement för denna sida",
+    "description":"Tooltip for the no-large-media per-site switch"
   },
   "popupTipNoCosmeticFiltering":{
     "message":"Växla kosmetiska filter för denna sida",
-    "description":"English: Toggle cosmetic filtering for this site"
+    "description":"Tooltip for the no-cosmetic-filtering per-site switch"
   },
   "popupTipNoRemoteFonts":{
     "message":"Växla blockering för hämtning av typsnitt på sidan",
-    "description":"English: Toggle the blocking of remote fonts for this site"
+    "description":"Tooltip for the no-remote-fonts per-site switch"
   },
   "popupTipGlobalRules":{
     "message":"Globala regler: denna kolumn avser regler som gäller alla sidor.",
     "description":"Tooltip when hovering the top-most cell of the global-rules column."
   },
   "popupTipLocalRules":{
-    "message":"Regionala regler: denna kolumn avser regler som endast gäller den sidan.\nRegionala regler överskrider globala regler.",
+    "message":"Lokala regler: denna kolumn avser regler som endast gäller denna sida.\nLokala regler överskrider globala regler.",
     "description":"Tooltip when hovering the top-most cell of the local-rules column."
   },
   "popupTipSaveRules":{
@@ -104,7 +104,7 @@
     "description":"Tooltip when hovering over the padlock in the dynamic filtering pane."
   },
   "popupTipRevertRules":{
-    "message":"Tryck för att ångra ändringar.",
+    "message":"Tryck för att ångra dina ändringar.",
     "description":"Tooltip when hovering over the eraser in the dynamic filtering pane."
   },
   "popupAnyRulePrompt":{
@@ -158,6 +158,10 @@
   "pickerQuit":{
     "message":"Avsluta",
     "description":"English: Quit"
+  },
+  "pickerPreview":{
+    "message":"Förhandsgranska",
+    "description":"Element picker preview mode: will cause the elements matching the current filter to be removed from the page"
   },
   "pickerNetFilters":{
     "message":"Nätfilter",
@@ -215,9 +219,25 @@
     "message":"Förhindra WebRTC från att läcka lokala IP-adresser",
     "description":"English: "
   },
-  "settingsExperimentalPrompt":{
-    "message":"Aktivera experimentella funktioner (<a href='https:\/\/github.com\/gorhill\/uBlock\/wiki\/Experimental-features'>Om<\/a>)",
-    "description":"English: Enable experimental features"
+  "settingPerSiteSwitchGroup":{
+    "message":"Förvalt beteende",
+    "description":""
+  },
+  "settingPerSiteSwitchGroupSynopsis":{
+    "message":"Dessa förinställda beteenden kan överskridas för varje sida",
+    "description":""
+  },
+  "settingsNoCosmeticFilteringPrompt":{
+    "message":"Stäng av kosmetisk filtrering",
+    "description":""
+  },
+  "settingsNoLargeMediaPrompt":{
+    "message":"Blockera medieelement större än {{input:number}} kB",
+    "description":""
+  },
+  "settingsNoRemoteFontsPrompt":{
+    "message":"Blockera externa typsnitt",
+    "description":""
   },
   "settingsStorageUsed":{
     "message":"Använt utrymme: {{value}} bytes",
@@ -233,23 +253,23 @@
   },
   "3pListsOfBlockedHostsPrompt":{
     "message":"{{netFilterCount}} nätverksfilter ＋ {{cosmeticFilterCount}} kosmetiska filter från:",
-    "description":"English: {{netFilterCount}} network filters ＋ {{cosmeticFilterCount}} cosmetic filters from:"
+    "description":"Appears at the top of the _3rd-party filters_ pane"
   },
   "3pListsOfBlockedHostsPerListStats":{
     "message":"{{used}} använda av {{total}}",
-    "description":"English: {{used}} used out of {{total}}"
+    "description":"Appears aside each filter list in the _3rd-party filters_ pane"
   },
   "3pAutoUpdatePrompt1":{
     "message":"Uppdatera filterlistor automatiskt.",
-    "description":"English: Auto-update filter lists."
+    "description":"A checkbox in the _3rd-party filters_ pane"
   },
   "3pUpdateNow":{
     "message":"Uppdatera nu",
-    "description":"English: Update now"
+    "description":"A button in the in the _3rd-party filters_ pane"
   },
   "3pPurgeAll":{
     "message":"Rensa all cache",
-    "description":"English: Purge all caches"
+    "description":"A button in the in the _3rd-party filters_ pane"
   },
   "3pParseAllABPHideFiltersPrompt1":{
     "message":"Tolka och applicera kosmetiska filter.",
@@ -257,7 +277,15 @@
   },
   "3pParseAllABPHideFiltersInfo":{
     "message":"<p>Det här alternativet aktiverar tolkning och applicering av <a href=\"https:\/\/adblockplus.org\/en\/faq_internal#elemhide\">Adblock Plus-kompatibla &ldquo;elementdöljningsfilter&rdquo;<\/a>. Dessa filter är i huvudsak kosmetiska. De tjänar till att dölja element som anses vara till visuella besvär och som inte kan bli blockerade av den nätförfrågningsbaserade filtreringsmotorn.<\/p><p>Genom att aktivera denna funktion ökar uBlock₀s minnesanvändning.<\/p>",
-    "description":"This option enables the parsing and enforcing of Adblock Plus-compatible 'element hiding' filters. These filters are essentially cosmetic, they serve to hide elements in a web page which are deemed to be a visual nuisance, and which can't be blocked by the net request-based filtering engine.\n\nEnabling this feature increases uBlock Origin's memory footprint."
+    "description":"Describes the purpose of the 'Parse and enforce cosmetic filters' feature."
+  },
+  "3pIgnoreGenericCosmeticFilters":{
+    "message":"Ignorera allmänna kosmetiska filter.",
+    "description":"This will cause uBO to ignore all generic cosmetic filters."
+  },
+  "3pIgnoreGenericCosmeticFiltersInfo":{
+    "message":"<p>Allmänna kosmetiska filter är de kosmetiska filter som är menade att användas på alla webbsidor.<p>Även om de hanteras effektivt av uBlock₀ så använder de upp mätbart med minne- och processoranvändning på vissa webbsidor, särskilt stora samt sidor som är öppna en länge tid.<p>Aktiveringen av denna inställning eliminerar den extra minnes- och processoranvändningen på webbsidorna med allmänna kosmetiska filter och minskar minnesanvändningen för uBlock₀ i helhet.<p>Det är rekommenderat att aktivera denna inställning på mindre kraftfulla enheter.",
+    "description":"Describes the purpose of the 'Ignore generic cosmetic filters' feature."
   },
   "3pListsOfBlockedHostsHeader":{
     "message":"Listor över blockerade värdar",
@@ -627,6 +655,10 @@
     "message":"Importera från molnlagring",
     "description":"tooltip"
   },
+  "cloudPullAndMerge":{
+    "message":"Importera från molnlagring och slå ihop med nuvarande inställningar",
+    "description":"tooltip"
+  },
   "cloudNoData":{
     "message":"...\n...",
     "description":""
@@ -646,6 +678,10 @@
   "genericBytes":{
     "message":"byte",
     "description":""
+  },
+  "contextMenuTemporarilyAllowLargeMediaElements":{
+    "message":"Tillåt tillfälligt stora medieelement",
+    "description":"A context menu entry, present when large media elements have been blocked on the current site"
   },
   "dummy":{
     "message":"This entry must be the last one",
